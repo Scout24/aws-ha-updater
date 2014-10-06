@@ -47,3 +47,15 @@ class ASGUpdaterTests(TestCase):
         with patch("aws_updater.asg.ASGUpdater._terminate_instances") as terminate_instances:
             self.asg_updater.rollback()
             terminate_instances.assert_called_with(['resource_id_of_instance_with_new_lc-1', 'resource_id_of_instance_with_new_lc-2'])
+
+    def test_should_resume_processes_when_committing_update(self):
+        self.asg.instances = []
+        self.asg_updater.commit_update()
+
+        self.asg.resume_processes.assert_called_with()
+
+    def test_should_not_resume_processes_when_rolling_back_update(self):
+        self.asg.instances = []
+        self.asg_updater.rollback()
+
+        self.assertFalse(self.asg.resume_processes.called)
