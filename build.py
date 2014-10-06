@@ -10,8 +10,9 @@ use_plugin("python.frosted")
 use_plugin("python.pycharm")
 
 
-name = "aws-updater"
+name = "aws-ha-updater"
 default_task = ['clean', 'analyze', 'publish']
+version = 0.5
 
 
 @init
