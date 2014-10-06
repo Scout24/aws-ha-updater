@@ -20,11 +20,14 @@ from docopt import docopt
 import boto.cloudformation
 
 from aws_updater import wait_for_action_to_complete, describe_stack
+from aws_updater.stack import StackUpdater
 
+EXIT_CODE_OK = 0
+EXIT_CODE_CANNOT_CREATE_STACK = 1
+EXIT_CODE_CANNOT_UPDATE_STACK = 2
+EXIT_CODE_CANNOT_UPDATE_ASGS = 3
 EXIT_CODE_VALIDATEERROR = 10
 EXIT_CODE_UNKNOWNPROBLEM = 125
-EXIT_CODE_CANNOT_UPDATE_STACK = 1
-EXIT_CODE_OK = 0
 
 error = None
 exit_code = EXIT_CODE_UNKNOWNPROBLEM
@@ -76,7 +79,7 @@ else:
 
 if not stack and not template:
     print "cannot create stack without template"
-    sys.exit(1)
+    sys.exit(EXIT_CODE_CANNOT_CREATE_STACK)
 
 if not template:
     template = "".join(stack.get_template().get("GetTemplateResponse", {}).get("GetTemplateResult", {}).get("TemplateBody", []))
@@ -115,4 +118,14 @@ if exit_code:
 if not error:
     exit_code = wait_for_action_to_complete(cloudformation_conn, stack_name, warmup_seconds, lenient_look_back, action_timeout)
 
+if exit_code:
+    sys.exit(exit_code)
 
+try:
+    StackUpdater(stack_name, region).update()
+    exit_code = EXIT_CODE_OK
+except BaseException as e:
+    print "[ERROR] %s" % e
+    exit_code = EXIT_CODE_CANNOT_UPDATE_ASGS
+
+sys.exit(exit_code)
