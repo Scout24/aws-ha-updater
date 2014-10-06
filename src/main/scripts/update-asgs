@@ -6,52 +6,21 @@ Usage:
 Options:
     --region=TEXT   aws region [default: eu-west-1]
 """
-import boto.cloudformation
-import boto.ec2
-import boto.ec2.elb
-import boto.ec2.autoscale
 
-from aws_updater.asg import ASGUpdater
-from aws_updater import describe_stack
+from docopt import docopt
 
+from aws_updater.stack import StackUpdater
 
-class StackUpdater(object):
+arguments = docopt(__doc__)
 
-    def __init__(self, stack_name, region):
-        self.stack_name = stack_name
-        self.cfn_conn = boto.cloudformation.connect_to_region(region)
-        self.as_conn = boto.ec2.autoscale.connect_to_region(region)
-        self.ec2_conn = boto.ec2.connect_to_region(region)
-        self.elb_conn = boto.ec2.elb.connect_to_region(region)
+stack_name = arguments["STACK_NAME"]
+region = arguments["--region"]
 
-    def get_all_asgs_from_stack(self):
-        stack = describe_stack(self.cfn_conn, stack_name)
-        if not stack:
-            raise Exception("no stack with name '%s' found" % self.stack_name)
-        print stack
+print "update-asgs: update the asgs of a stack in a high-available manner"
+print "=================================================================="
 
-        asg_resources = []
-        for resource in stack.describe_resources():
-            if resource.resource_type == "AWS::AutoScaling::AutoScalingGroup":
-                asg_resources.append(resource.physical_resource_id)
-        return self.as_conn.get_all_groups(asg_resources)
-
-    def update(self):
-        for asg in self.get_all_asgs_from_stack():
-            print "updating asg '%s'" % asg.name
-            ASGUpdater(asg, self.as_conn, self.ec2_conn, self.elb_conn).update()
-
-
-if __name__ == "__main__":
-    from docopt import docopt
-
-    arguments = docopt(__doc__)
-    print arguments
-
-    stack_name = arguments["STACK_NAME"]
-    region = arguments["--region"]
-    try:
-        StackUpdater(stack_name, region).update()
-    except Exception as e:
-        print "Problem while updating stack {0}: {1}".format(stack_name, e)
-        raise
+try:
+    StackUpdater(stack_name, region).update()
+except Exception as e:
+    print "[Error] Problem while updating stack {0}: {1}".format(stack_name, e)
+    raise
