@@ -21,5 +21,7 @@ pyb install_dependencies
     ln -sf ../../../../src/main/python/* .
 )
 
+echo
 echo "remember to 'source $VE/bin/activate' every time you want to use this project."
+echo
 
