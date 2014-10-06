@@ -26,7 +26,6 @@ class ASGUpdaterTests(TestCase):
 
         self.ec2_conn.terminate_instances.assert_called_with(["any-machine-id", "any-other-machine-id"])
 
-
     def test_should_terminate_old_instances_when_committing_update(self):
         self.asg.instances = [Mock(instance_id="1", launch_config_name="any-lc"),
                               Mock(instance_id="resource_id_of_instance_with_old_lc", launch_config_name="any-old-lc"),
@@ -35,4 +34,3 @@ class ASGUpdaterTests(TestCase):
         with patch("aws_updater.asg.ASGUpdater._terminate_instances") as terminate_instances:
             self.asg_updater.commit_update()
             terminate_instances.assert_called_with(["resource_id_of_instance_with_old_lc"])
-
