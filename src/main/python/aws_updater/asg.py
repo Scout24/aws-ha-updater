@@ -21,6 +21,9 @@ class ASGUpdater(object):
         self.as_conn = as_conn
         self.ec2_conn = ec2_conn
         self.elb_conn = elb_conn
+        self.original_desired_capacity = None
+        self.original_min_size = None
+        self.original_max_size = None
 
     def update(self):
         if self.needs_update():
