@@ -17,6 +17,7 @@ version = 0.5
 
 @init
 def set_properties(project):
+    project.build_depends_on('mock')
     project.depends_on('docopt')
     project.depends_on('boto')
 
