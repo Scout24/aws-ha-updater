@@ -38,3 +38,12 @@ class ASGUpdaterTests(TestCase):
         with patch("aws_updater.asg.ASGUpdater._terminate_instances") as terminate_instances:
             self.asg_updater.commit_update()
             terminate_instances.assert_called_with(["resource_id_of_instance_with_old_lc"])
+
+    def test_should_terminate_new_instances_when_rolling_back_update(self):
+        self.asg.instances = [Mock(instance_id="resource_id_of_instance_with_new_lc-1", launch_config_name="any-lc"),
+                              Mock(instance_id="2", launch_config_name="any-old-lc"),
+                              Mock(instance_id="resource_id_of_instance_with_new_lc-2", launch_config_name="any-lc")]
+
+        with patch("aws_updater.asg.ASGUpdater._terminate_instances") as terminate_instances:
+            self.asg_updater.rollback()
+            terminate_instances.assert_called_with(['resource_id_of_instance_with_new_lc-1', 'resource_id_of_instance_with_new_lc-2'])
