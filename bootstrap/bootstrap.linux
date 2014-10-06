@@ -1,0 +1,25 @@
+#!/bin/bash
+set -e -E -u
+
+VE=venv
+rm -rf $VE
+
+virtualenv $VE
+set +u
+source $VE/bin/activate
+set -u
+
+pip install pybuilder
+pyb install_dependencies
+
+(
+    cd $VE/bin
+    ln -sf ../../src/main/scripts/* .
+)
+(
+    cd $VE/lib/python*/site-packages
+    ln -sf ../../../../src/main/python/* .
+)
+
+echo "remember to 'source $VE/bin/activate' every time you want to use this project."
+

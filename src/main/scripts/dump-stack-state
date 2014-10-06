@@ -1,0 +1,40 @@
+#!/usr/bin/env python
+"""
+usage: check-stack STACK_NAME [--show-events]
+"""
+
+from docopt import docopt
+
+import boto.cloudformation
+
+arguments = docopt(__doc__)
+show_events = arguments["--show-events"]
+
+cloudformation_conn = boto.cloudformation.connect_to_region("eu-west-1")
+print "connection cloudformation: %s" % cloudformation_conn
+print
+
+
+def status(d, key_name, key_state, key_type):
+    if not hasattr(d, "iteritems"):
+        d = vars(d)
+    name = d.get(key_name, "")
+    state = d.get(key_state, "")
+    t = d.get(key_type, key_type)
+    return "%30s %-40s [%s]" % (state, t, name)
+
+for stack in cloudformation_conn.describe_stacks(arguments["STACK_NAME"]):
+    print status(stack, "stack_name", "stack_status", "STACK")
+
+id2events = {}
+if show_events:
+    for event in stack.describe_events():
+        id2events.setdefault(event.logical_resource_id, []).append(event)
+
+print "-" * 40
+for resource in stack.describe_resources():
+    print status(resource, "logical_resource_id", "resource_status", "resource_type")
+    if show_events:
+        for event in id2events.get(resource.logical_resource_id, []):
+            print "%28s  %s" % (event.resource_status, event.timestamp)
+print "-" * 40
