@@ -47,8 +47,8 @@ warmup_seconds = int(arguments["--warmup-seconds"])
 lenient_look_back = int(arguments["--lenient_look_back"])
 action_timeout = int(arguments["--action-timeout"])
 
-print "aws-updater: update/create an aws stack"
-print "======================================="
+print "update-stack: update/create an aws stack"
+print "========================================"
 
 cloudformation_conn = boto.cloudformation.connect_to_region(region)
 
@@ -109,7 +109,10 @@ except BaseException, e:
     print e
     exit_code = EXIT_CODE_CANNOT_UPDATE_STACK
 
-if exit_code or error:
+if exit_code:
     sys.exit(exit_code)
 
-sys.exit(wait_for_action_to_complete(cloudformation_conn, stack_name, warmup_seconds, lenient_look_back, action_timeout))
+if not error:
+    exit_code = wait_for_action_to_complete(cloudformation_conn, stack_name, warmup_seconds, lenient_look_back, action_timeout)
+
+
