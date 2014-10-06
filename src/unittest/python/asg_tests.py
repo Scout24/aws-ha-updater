@@ -16,10 +16,14 @@ class ASGUpdaterTests(TestCase):
         self.asg_conn = Mock(AutoScaleConnection)
         self.ec2_conn = Mock(EC2Connection)
         self.elb_conn = Mock(ELBConnection)
+        patch("aws_updater.asg.print", create=True).start()
         self.asg_updater = ASGUpdater(self.asg,
                                       self.asg_conn,
                                       self.ec2_conn,
                                       self.elb_conn)
+
+    def tearDown(self):
+        patch.stopall()
 
     def test_should_terminate_instances(self):
         self.asg_updater._terminate_instances(["any-machine-id", "any-other-machine-id"])
