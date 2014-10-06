@@ -44,7 +44,7 @@ def describe_stack(connection, stack_name):
     try:
         for stack in connection.describe_stacks(stack_name):
             return stack
-    except:
+    except Exception:
         return None
 
 
@@ -69,7 +69,7 @@ def dump(d, header=None, message=None, indent=0, exclude_keys=[]):
         try:
             v = json.loads(v)
             v = json.dumps(v, indent=4)
-        except:
+        except Exception:
             pass
         v = str(v)
         first_line = True
