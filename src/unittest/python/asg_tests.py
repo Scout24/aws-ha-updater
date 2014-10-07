@@ -96,27 +96,27 @@ class ASGUpdaterTests(TestCase):
     def test_should_get_nr_of_uptodate_instances(self, views):
         self.asg.launch_config_name = "current-lc"
         views.return_value = {
-                             u'i-46cd9105': {
-                                  'asg': Mock(launch_config_name="current-lc"),
-                                  'elb': Mock(state="InService")},
-                             # Does not qualify, out of service
-                             u'i-46cd9109': {
-                                  'asg': Mock(launch_config_name="current-lc"),
-                                  'elb': Mock(state="OutOfService")},
-                             # Does not qualify, no elb
-                             u'i-46cd9108': {
-                                  'asg': Mock(launch_config_name="current-lc")},
-                             # Does not qualify, other launch config and out of service
-                             u'i-46cd9107': {
-                                  'asg': Mock(launch_config_name="other-lc"),
-                                  'elb': Mock(state="OutOfService")},
-                             # Does not qualify, other launch config
-                             u'i-46cd9145': {
-                                  'asg': Mock(launch_config_name="other-lc"),
-                                  'elb': Mock(state="InService")},
-                             u'i-46cd9142': {
-                                  'asg': Mock(launch_config_name="current-lc"),
-                                  'elb': Mock(state="InService")},
-                              }
+            u'i-46cd9105': {
+                'asg': Mock(launch_config_name="current-lc"),
+                'elb': Mock(state="InService")},
+            # Does not qualify, out of service
+            u'i-46cd9109': {
+                'asg': Mock(launch_config_name="current-lc"),
+                'elb': Mock(state="OutOfService")},
+            # Does not qualify, no elb
+            u'i-46cd9108': {
+                'asg': Mock(launch_config_name="current-lc")},
+            # Does not qualify, other launch config and out of service
+            u'i-46cd9107': {
+                'asg': Mock(launch_config_name="other-lc"),
+                'elb': Mock(state="OutOfService")},
+            # Does not qualify, other launch config
+            u'i-46cd9145': {
+                'asg': Mock(launch_config_name="other-lc"),
+                'elb': Mock(state="InService")},
+            u'i-46cd9142': {
+                'asg': Mock(launch_config_name="current-lc"),
+                'elb': Mock(state="InService")},
+        }
 
         self.assertEqual(self.asg_updater.get_nr_of_uptodate_instances(), 2)
