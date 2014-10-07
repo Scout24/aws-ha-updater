@@ -5,7 +5,7 @@ from boto.ec2.elb import ELBConnection
 from boto.ec2 import EC2Connection
 from boto.ec2.autoscale import AutoScalingGroup, AutoScaleConnection
 
-from aws_updater.asg import ASGUpdater
+from aws_updater.asg import ASGUpdater, RolledBackException
 
 
 class ASGUpdaterTests(TestCase):
@@ -120,3 +120,20 @@ class ASGUpdaterTests(TestCase):
         }
 
         self.assertEqual(self.asg_updater.get_nr_of_uptodate_instances(), 2)
+
+    def test_should_commit_after_update(self):
+        mock_updater = Mock(ASGUpdater)
+
+        ASGUpdater.update(mock_updater)
+
+        mock_updater.commit_update.assert_called_with()
+        self.assertEqual(mock_updater.rollback.called, False)
+
+    def test_should_rollback_after_failed_update(self):
+        mock_updater = Mock(ASGUpdater, asg=Mock(name="some-asg"))
+        mock_updater.wait_for_scale_out_complete.side_effect = Exception("Timed out while slacking off")
+
+        self.assertRaises(RolledBackException, ASGUpdater.update, mock_updater)
+
+        mock_updater.rollback.assert_called_with()
+        self.assertEqual(mock_updater.commit_update.called, False)
