@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from mock import Mock, patch
+from mock import Mock, patch, call
 from boto.ec2.elb import ELBConnection
 from boto.ec2 import EC2Connection
 from boto.ec2.autoscale import AutoScalingGroup, AutoScaleConnection
@@ -137,3 +137,33 @@ class ASGUpdaterTests(TestCase):
 
         mock_updater.rollback.assert_called_with()
         self.assertEqual(mock_updater.commit_update.called, False)
+
+    @patch("aws_updater.asg.time.sleep")
+    @patch("aws_updater.asg.ASGUpdater.get_instances_views")
+    @patch("aws_updater.asg.ASGUpdater.count_running_instances")
+    def test_should_wait_for_scale_out_completed_when_needing_two_tries(self, running_instances, views, sleep):
+        running_instances.return_value = 2
+        self.asg_conn.get_all_groups.return_value = (Mock(launch_config_name="current-lc"),)
+        two_uptodate_after_two_tries = [
+            {  # returned on first call of get_instances_views
+                u'i-46cd9105': {
+                    'asg': Mock(launch_config_name="current-lc"),
+                    'elb': Mock(state="InService")},
+                u'i-46cd9109': {
+                    'asg': Mock(launch_config_name="current-lc"),
+                    'elb': Mock(state="OutOfService")},
+            },
+            {  # returned on second call
+                u'i-46cd9105': {
+                    'asg': Mock(launch_config_name="current-lc"),
+                    'elb': Mock(state="InService")},
+                u'i-46cd9109': {
+                    'asg': Mock(launch_config_name="current-lc"),
+                    'elb': Mock(state="InService")},
+            }]
+
+        views.side_effect = two_uptodate_after_two_tries
+
+        self.asg_updater.wait_for_scale_out_complete()
+
+        self.assertEqual(sleep.call_args_list, [call(1)])
