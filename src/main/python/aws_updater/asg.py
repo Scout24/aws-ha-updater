@@ -16,8 +16,10 @@ class RolledBackException(Exception):
 
 class ASGUpdater(object):
     RUNNING_LIFECYCLE_STATES = ("Pending", "InService", "Rebooting")
+    SCALE_OUT_COMPLETED = "SCALE_OUT_COMPLETED"
 
-    def __init__(self, asg, as_conn, ec2_conn, elb_conn):
+
+    def __init__(self, asg, as_conn, ec2_conn, elb_conn, observer_callback=None):
         self.asg = asg
         self.as_conn = as_conn
         self.ec2_conn = ec2_conn
@@ -25,11 +27,12 @@ class ASGUpdater(object):
         self.original_desired_capacity = None
         self.original_min_size = None
         self.original_max_size = None
+        self.observer_callback = observer_callback
 
     def update(self):
         if self.needs_update():
-            self.scale_out()
             try:
+                self.scale_out()
                 self.wait_for_scale_out_complete()
                 self.commit_update()
             except Exception as e:
@@ -121,6 +124,7 @@ class ASGUpdater(object):
             self.original_desired_capacity, self.asg.desired_capacity))
 
         self.asg.update()
+        self.observer_callback(self.SCALE_OUT_COMPLETED)
 
     def commit_update(self):
         """
