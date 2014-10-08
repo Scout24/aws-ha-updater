@@ -5,7 +5,7 @@ from boto.ec2.elb import ELBConnection
 from boto.ec2 import EC2Connection
 from boto.ec2.autoscale import AutoScalingGroup, AutoScaleConnection
 
-from aws_updater.asg import ASGUpdater, RolledBackException
+from aws_updater.asg import ASGUpdater, RolledBackException, TimeoutException
 
 
 class ASGUpdaterTests(TestCase):
@@ -167,3 +167,22 @@ class ASGUpdaterTests(TestCase):
         self.asg_updater.wait_for_scale_out_complete()
 
         self.assertEqual(sleep.call_args_list, [call(1)])
+
+    @patch("aws_updater.asg.time.time")
+    @patch("aws_updater.asg.time.sleep")
+    @patch("aws_updater.asg.ASGUpdater.get_instances_views")
+    @patch("aws_updater.asg.ASGUpdater.count_running_instances")
+    def test_should_time_out_when_too_few_instances_become_healthy(self, running_instances, views, sleep, time):
+        running_instances.return_value = 2
+        self.asg_conn.get_all_groups.return_value = (Mock(launch_config_name="current-lc"),)
+        time.side_effect = [0, 1200, 9000]
+        views.return_value = {
+            u'i-46cd9105': {
+                'asg': Mock(launch_config_name="current-lc"),
+                'elb': Mock(state="OutOfService")},
+            u'i-46cd9109': {
+                'asg': Mock(launch_config_name="other-lc"),
+                'elb': Mock(state="InService")},
+        }
+
+        self.assertRaises(TimeoutException, self.asg_updater.wait_for_scale_out_complete)
