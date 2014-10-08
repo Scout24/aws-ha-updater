@@ -1,0 +1,140 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description" : "Describes the Test Stack including ELB, RDS, security groups and autoscaling group.",
+    "Parameters": {
+        "amiID": {
+            "Description": "AMI ID",
+            "Type": "String",
+            "MinLength": "1",
+            "MaxLength": "41",
+            "AllowedPattern": "ami-[a-zA-Z0-9]*",
+            "ConstraintDescription": "Format: ami-..."
+        },
+        "vpcID": {
+            "Description": "VPC ID",
+            "Type": "String",
+            "MinLength": "1",
+            "MaxLength": "41",
+            "AllowedPattern": "vpc-[a-zA-Z0-9]*",
+            "ConstraintDescription": "Format: vpc-..."
+        },
+        "subnetID": {
+            "Description": "Subnet ID (has to correspond to AZ)",
+            "Type": "String",
+            "MinLength": "1",
+            "MaxLength": "41",
+            "AllowedPattern": "subnet-[a-zA-Z0-9]*",
+            "ConstraintDescription": "Format: subnet-..."
+        },
+        "az": {
+            "Description": "Availability zone (has to correspond to subnetID)",
+            "Type": "String",
+            "MinLength": "1",
+            "MaxLength": "41",
+            "AllowedPattern": "[a-zA-Z0-9]*-[a-zA-Z0-9]*-[a-zA-Z0-9]*",
+            "ConstraintDescription": "Example: eu-west-1a"
+        }
+    },
+    "Resources": {
+        "sg": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Test Stack",
+                "VpcId": {
+                    "Ref": "vpcID"
+                }
+            }
+        },
+        "sgIngressSelf": {
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "sg"
+                },
+                "IpProtocol": "-1",
+                "FromPort": "1",
+                "ToPort": "65535",
+                "SourceSecurityGroupId": {
+                    "Ref": "sg"
+                }
+            }
+        },
+        "elb": {
+            "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+            "Properties": {
+                "Scheme": "internal",
+                "Subnets": [
+                    { "Ref": "subnetID" }
+                ],
+                "HealthCheck": {
+                    "HealthyThreshold": "2",
+                    "Interval": "5",
+                    "Target": "HTTP:80/index.html",
+                    "Timeout": "2",
+                    "UnhealthyThreshold": "2"
+                },
+                "SecurityGroups": [
+                    {
+                        "Ref": "sg"
+                    }
+                ],
+                "Listeners": [
+                    {
+                        "InstancePort": "80",
+                        "LoadBalancerPort": "80",
+                        "Protocol": "HTTP",
+                        "InstanceProtocol": "HTTP"
+                    }
+                ]
+            }
+        },
+        "lc": {
+            "Type": "AWS::AutoScaling::LaunchConfiguration",
+            "Properties": {
+                "AssociatePublicIpAddress": "true",
+                "ImageId": {
+                    "Ref": "amiID"
+                },
+                "InstanceType": "t2.micro",
+                "SecurityGroups": [
+                    {
+                        "Ref": "sg"
+                    }
+                ],
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": ["", [
+                            "#!/bin/bash -v\n",
+                            "yum install httpd -y\n",
+                            "touch /var/www/html/index.html\n",
+                            "service httpd start\n"
+                        ]]
+                    }
+                }
+            }
+        },
+        "asg": {
+            "Type": "AWS::AutoScaling::AutoScalingGroup",
+            "Properties": {
+                "VPCZoneIdentifier": [
+                    { "Ref": "subnetID" }
+                ],
+                "AvailabilityZones": [ { "Ref": "az" } ],
+                "Cooldown": "10",
+                "DesiredCapacity": "3",
+                "MaxSize": "6",
+                "MinSize": "1",
+                "HealthCheckGracePeriod": "600",
+                "HealthCheckType": "EC2",
+                "LaunchConfigurationName": {
+                    "Ref": "lc"
+                },
+                "LoadBalancerNames": [
+                    {
+                        "Ref": "elb"
+                    }
+                ]
+            }
+        }
+    }
+}
