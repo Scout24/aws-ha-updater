@@ -24,13 +24,14 @@ aws-ha-release script from the missing-tools collection.
 
 - AWS [credentials for boto](http://docs.pythonboto.org/en/latest/boto_config_tut.html#credentials) (e.g. $HOME/.boto file)
 
-- AWS resources managed via [CloudFormation](http://docs.aws.amazon.com/cli/latest/reference/cloudformation/)
+- AWS resources managed by [CloudFormation](http://docs.aws.amazon.com/cli/latest/reference/cloudformation/),
+    described in [templates](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/template-guide.html)
 
-- ASGs have NO [UpdatePolicy](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-attribute-updatepolicy.html) (we implement our own here)
+- ASGs must **not** have an [UpdatePolicy](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-attribute-updatepolicy.html) (we implement our own here)
 
 ## Usage
 ```
-    update-stack STACK_NAME [options] [PARAMETER...]
+update-stack STACK_NAME [options] [PARAMETER...]
 
 Options:
     --region=STRING            aws region to connect to [default: eu-west-1]
@@ -39,10 +40,12 @@ Options:
     --warmup-seconds=INT       Seconds to wait for warmup [default: 25]
     --action-timeout=INT       Seconds to wait for the action to finish [default: 300]
     --lenient_look_back=INT    Seconds to look back for events [default: 5]
+
+    PARAMETER...               key=value pairs, must correspond to the template parameters
 ```
 
 ```
-    update-asgs STACK_NAME [options]
+update-asgs STACK_NAME [options]
 
 Options:
     --region=TEXT   aws region [default: eu-west-1]
