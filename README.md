@@ -1,7 +1,7 @@
 aws-ha-updater
 ==============
 
-The `aws-ha-updater` allows you to update AWS EC2 stacks in a highly available manner.
+The `aws-ha-updater` allows you to update AWS Cloudformation stacks in a highly available manner.
 
 ## Why another tool?
 * Raw CloudFormation would be the preferred solution for rolling out updates, **but** CloudFormation is currently
@@ -9,9 +9,9 @@ unable to use the ELB health check to see if an instance with a new launch confi
 The result is that deployment with CloudFormation is a gamble that might result in a cluster of borked instances,
 which is not acceptable for a web company.
 
-* Asgard, the netflix solution to this, is being rewritten and nobody knows for sure when 2.0 will hit the repository.
+* [Asgard](https://github.com/Netflix/asgard), the netflix solution to this, is being rewritten and nobody knows for sure when 2.0 will hit the repository.
 
-* The aws-missing-tools repository provides a bash and ruby implementation. We're not comfortable with using bash to 
+* The [aws-missing-tools](https://github.com/colinbjohnson/aws-missing-tools) repository provides a bash and ruby implementation. We're not comfortable with using bash to
 instrument EC2/CFN, and have not evaluated the ruby variant. This solution is however heavily inspired by the
 aws-ha-release script from the missing-tools collection.
 
@@ -20,13 +20,13 @@ aws-ha-release script from the missing-tools collection.
 
 - python 2.6+ (but not python3 yet)
 
-- boto SDK
+- [boto SDK](http://docs.pythonboto.org/en/latest/getting_started.html)
 
-- AWS credentials (e.g. $HOME/.boto file)
+- AWS [credentials for boto](http://docs.pythonboto.org/en/latest/boto_config_tut.html#credentials) (e.g. $HOME/.boto file)
 
-- AWS resources managed via CloudFormation
+- AWS resources managed via [CloudFormation](http://docs.aws.amazon.com/cli/latest/reference/cloudformation/)
 
-- ASGs have NO UpdatePolicy (we implement our own here)
+- ASGs have NO [UpdatePolicy](http://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-attribute-updatepolicy.html) (we implement our own here)
 
 ## Usage
 ```
