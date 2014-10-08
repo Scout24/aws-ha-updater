@@ -48,6 +48,14 @@ def describe_stack(connection, stack_name):
         return None
 
 
+def get_all_autoscaling_groups(as_conn, stack):
+    asg_resources = []
+    for resource in stack.describe_resources():
+        if resource.resource_type == "AWS::AutoScaling::AutoScalingGroup":
+            asg_resources.append(resource.physical_resource_id)
+    return as_conn.get_all_groups(asg_resources)
+
+
 def dump(d, header=None, message=None, indent=0, exclude_keys=[]):
     def dump_line(k, v):
         sep = ": " if k else "  "

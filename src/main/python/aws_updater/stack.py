@@ -4,7 +4,7 @@ import boto.ec2.elb
 import boto.ec2.autoscale
 
 from aws_updater.asg import ASGUpdater
-from aws_updater import describe_stack
+from aws_updater import describe_stack, get_all_autoscaling_groups
 
 
 class StackUpdater(object):
@@ -21,11 +21,7 @@ class StackUpdater(object):
         if not stack:
             raise Exception("no stack with name '%s' found" % self.stack_name)
 
-        asg_resources = []
-        for resource in stack.describe_resources():
-            if resource.resource_type == "AWS::AutoScaling::AutoScalingGroup":
-                asg_resources.append(resource.physical_resource_id)
-        return self.as_conn.get_all_groups(asg_resources)
+        return get_all_autoscaling_groups(self.as_conn, stack)
 
     def update(self):
         for asg in self.get_all_asgs_from_stack():
