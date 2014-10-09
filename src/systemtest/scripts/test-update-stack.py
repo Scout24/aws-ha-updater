@@ -3,6 +3,7 @@ import boto
 import aws_updater
 import time
 import argparse
+import logging
 
 from aws_updater.stack import StackUpdater
 from aws_updater.asg import ASGUpdater
@@ -66,10 +67,10 @@ def test_no_update():
 
     # action plan
     asg_before = get_asg()
-    print "Before: " + sizing_info(asg_before)
+    print "ASG sizing before update: " + sizing_info(asg_before)
     StackUpdater(stack_name, region, observer_callback=callback).update()
     asg_after = get_asg()
-    print "After: " + sizing_info(asg_after)
+    print "ASG sizing after update: " + sizing_info(asg_after)
 
     assert asg_before.min_size == asg_after.min_size, "ASG min_size shouldn't have changed"
     assert asg_before.max_size == asg_after.max_size, "ASG max_size shouldn't have changed"
@@ -115,7 +116,7 @@ def test_update():
 
     # terminate instances is async, we need a bit of time to wait here
     # TODO: find something better
-    time.sleep(10)
+    time.sleep(60)
 
     for instance in asg_after.instances:
         if instance.lifecycle_state in ASGUpdater.RUNNING_LIFECYCLE_STATES:
@@ -126,7 +127,16 @@ def test_update():
                                                                                 asg_after.launch_config_name)
 
 
-print("Testing stackupdater doing nothing if there is nothing to do:")
-test_no_update()
-print("Testing stackupdater updates all instances to match the new lc:")
-test_update()
+logging.info("Testing stackupdater doing nothing if there is nothing to do:")
+try:
+    test_no_update()
+    logging.info("Successfully completed test_no_update")
+except Exception as e:
+    logging.error("test_no_update failed with error: " + str(e))
+
+logging.info("Testing stackupdater updates all instances to match the new lc:")
+try:
+    test_update()
+    logging.info("Successfully completed test_update")
+except Exception as e:
+    logging.error("test_update failed with error: " + str(e))
