@@ -23,7 +23,7 @@ class StackUpdater(object):
         else:
             self.observer_callback = observer_callback
 
-    def noop_observer_callback(self):
+    def noop_observer_callback(self, event):
         pass
 
     def get_all_asgs_from_stack(self):

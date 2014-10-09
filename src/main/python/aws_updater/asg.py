@@ -18,7 +18,6 @@ class ASGUpdater(object):
     RUNNING_LIFECYCLE_STATES = ("Pending", "InService", "Rebooting")
     SCALE_OUT_COMPLETED = "SCALE_OUT_COMPLETED"
 
-
     def __init__(self, asg, as_conn, ec2_conn, elb_conn, observer_callback=None):
         self.asg = asg
         self.as_conn = as_conn
@@ -27,7 +26,14 @@ class ASGUpdater(object):
         self.original_desired_capacity = None
         self.original_min_size = None
         self.original_max_size = None
-        self.observer_callback = observer_callback
+
+        if not observer_callback:
+            self.observer_callback = self.noop_observer_callback
+        else:
+            self.observer_callback = observer_callback
+
+    def noop_observer_callback(self, event):
+        pass
 
     def update(self):
         if self.needs_update():
