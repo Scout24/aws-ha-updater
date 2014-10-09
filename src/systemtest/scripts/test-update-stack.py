@@ -26,7 +26,7 @@ parser.add_argument("--region", help="Region", default="eu-west-1", type=str)
 args = parser.parse_args()
 
 # constants
-stack_name = "teststack"
+stack_name = "teststack-" + str(int(time.time()))
 stack_template = read_teststack_template()
 region = args.region
 subnet = args.subnet
@@ -37,6 +37,29 @@ image_id_mapping = {"ami-892fe1fe": "ami-748e2903",
 
 cfn_conn = boto.cloudformation.connect_to_region(region)
 as_conn = boto.ec2.autoscale.connect_to_region(region)
+
+
+def create_stack():
+    parameters = [
+        ("amiID", "ami-748e2903"),
+        ("az", az),
+        ("subnetID", subnet),
+        ("vpcID", vpc)]
+    cfn_conn.create_stack(stack_name, stack_template, parameters=parameters)
+    assert aws_updater.wait_for_action_to_complete(cfn_conn,stack_name, 25, 5, 300) == 0, \
+        "Stack creation didn't complete within 300s"
+
+
+def update_stack(parameters):
+    cfn_conn.update_stack(stack_name, stack_template, parameters=parameters)
+    assert aws_updater.wait_for_action_to_complete(cfn_conn,stack_name, 25, 5, 300) == 0, \
+        "Stack update didn't complete within 300s"
+
+
+def delete_stack():
+    cfn_conn.delete_stack(stack_name)
+    assert aws_updater.wait_for_action_to_complete(cfn_conn,stack_name, 25, 5, 300) == 0, \
+        "Stack deletion didn't complete within 300s"
 
 
 def sizing_info(asg):
@@ -95,16 +118,19 @@ def test_update():
     # action plan
     asg_before = get_asg()
     logger.info("ASG sizing before update: " + sizing_info(asg_before))
+
     desired_ami_id = get_next_ami_id(asg_before)
     parameters = [
         ("amiID", desired_ami_id),
         ("az", az),
         ("subnetID", subnet),
         ("vpcID", vpc)]
-    cfn_conn.update_stack(stack_name, stack_template, parameters=parameters)
-    assert aws_updater.wait_for_action_to_complete(cfn_conn,stack_name, 25, 5, 300) == 0
+    update_stack(parameters)
 
     StackUpdater(stack_name, region, observer_callback=callback).update()
+
+    logger.info("Waiting 300s to ensure asg is in consistent state...")
+    time.sleep(300)
     asg_after = get_asg()
     logger.info("ASG sizing after update: " + sizing_info(asg_after))
 
@@ -116,8 +142,10 @@ def test_update():
 
     # terminate instances is async, we need a bit of time to wait here
     # TODO: find something better
-    time.sleep(600)
+    logger.info("Waiting 300s to ensure old instances are terminated before checking consistency...")
+    time.sleep(300)
 
+    print logger.info("Found the following instances: " + str(asg_after.instances))
     for instance in asg_after.instances:
         if instance.lifecycle_state in ASGUpdater.RUNNING_LIFECYCLE_STATES:
             logger.info("Found instance: {0} in state: {1}".format(instance.instance_id, instance.lifecycle_state))
@@ -126,6 +154,12 @@ def test_update():
                                                                                 instance.launch_config_name,
                                                                                 asg_after.launch_config_name)
 
+
+logger.info("Creating new stack for this test: {0}".format(stack_name))
+create_stack()
+
+logger.info("Waiting 300s to ensure the stack is fully populated before going on")
+time.sleep(300)
 
 logger.info("Testing stackupdater doing nothing if there is nothing to do:")
 try:
@@ -142,3 +176,6 @@ try:
 except Exception as e:
     logger.error("test_update failed with error: " + str(e))
     logger.exception(e)
+
+logger.info("Deleting stack: {0}".format(stack_name))
+delete_stack()
