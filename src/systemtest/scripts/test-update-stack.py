@@ -85,7 +85,6 @@ def test_update():
             asg = get_asg()
             print "ASG sizing after scale_out: " + sizing_info(asg)
 
-            #TODO: add nice error messages
             #TODO: test more precisely
             assert asg.min_size > asg_before.min_size, "ASG min_size should be bigger than before scale_out"
             assert asg.max_size > asg_before.max_size, "ASG max_size should be bigger than before scale_out"
