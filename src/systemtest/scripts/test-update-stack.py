@@ -32,15 +32,13 @@ az = args.az
 image_id_mapping = {"ami-892fe1fe": "ami-748e2903",
                     "ami-748e2903": "ami-892fe1fe"}
 
-
-
 cfn_conn = boto.cloudformation.connect_to_region(region)
 as_conn = boto.ec2.autoscale.connect_to_region(region)
 
 
 def sizing_info(asg):
     return "asg: {0}, min_size: {1}, max_size {2}, desired_capacity: {2}".format(asg.name, asg.min_size, asg.max_size,
-                                                                                        asg.desired_capacity)
+                                                                                 asg.desired_capacity)
 
 
 def get_image_id(asg):
@@ -58,6 +56,7 @@ def get_asg():
     autoscaling_groups = aws_updater.get_all_autoscaling_groups(as_conn, stack)
     assert len(autoscaling_groups) == 1
     return autoscaling_groups[0]
+
 
 def test_no_update():
     def callback(event):
@@ -77,6 +76,7 @@ def test_no_update():
     assert asg_before.desired_capacity == asg_after.desired_capacity
 
     assert len(asg_after.suspended_processes) == 0
+
 
 def test_update():
     def callback(event):
@@ -111,6 +111,8 @@ def test_update():
     assert asg_before.max_size == asg_after.max_size
     assert asg_before.desired_capacity == asg_after.desired_capacity
 
+    assert len(asg_after.suspended_processes) == 0, "All processes must be resumed after Stackupdater run"
+
     # terminate instances is async, we need a bit of time to wait here
     # TODO: find something better
     time.sleep(10)
@@ -118,14 +120,13 @@ def test_update():
     for instance in asg_after.instances:
         if instance.lifecycle_state in ASGUpdater.RUNNING_LIFECYCLE_STATES:
             print("Found instance: {0} in state: {1}".format(instance.instance_id, instance.lifecycle_state))
-            if instance.launch_config_name != asg_after.launch_config_name:
-                print "Instance {0} has launch-config {1} but should have {2}".format(instance.instance_id,
+            assert instance.launch_config_name == asg_after.launch_config_name, \
+                "Instance {0} has launch-config {1} but should have {2}".format(instance.instance_id,
                                                                                 instance.launch_config_name,
                                                                                 asg_after.launch_config_name)
 
-    assert len(asg_after.suspended_processes) == 0
 
 print("Testing stackupdater doing nothing if there is nothing to do:")
-#test_no_update()
+test_no_update()
 print("Testing stackupdater updates all instances to match the new lc:")
 test_update()
