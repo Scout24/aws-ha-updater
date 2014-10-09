@@ -8,6 +8,8 @@ import logging
 from aws_updater.stack import StackUpdater
 from aws_updater.asg import ASGUpdater
 
+logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', datefmt='%d.%m.%Y %H:%M:%S',level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def read_teststack_template():
     content = ""
@@ -61,16 +63,15 @@ def get_asg():
 
 def test_no_update():
     def callback(event):
-        print event
         if event == ASGUpdater.SCALE_OUT_COMPLETED:
             raise Exception("No update --> no scaleout!")
 
     # action plan
     asg_before = get_asg()
-    print "ASG sizing before update: " + sizing_info(asg_before)
+    logger.info("ASG sizing before update: " + sizing_info(asg_before))
     StackUpdater(stack_name, region, observer_callback=callback).update()
     asg_after = get_asg()
-    print "ASG sizing after update: " + sizing_info(asg_after)
+    logger.info("ASG sizing after update: " + sizing_info(asg_after))
 
     assert asg_before.min_size == asg_after.min_size, "ASG min_size shouldn't have changed"
     assert asg_before.max_size == asg_after.max_size, "ASG max_size shouldn't have changed"
@@ -81,7 +82,6 @@ def test_no_update():
 
 def test_update():
     def callback(event):
-        print event
         if event == ASGUpdater.SCALE_OUT_COMPLETED:
             asg = get_asg()
             print "ASG sizing after scale_out: " + sizing_info(asg)
@@ -94,7 +94,7 @@ def test_update():
 
     # action plan
     asg_before = get_asg()
-    print "Before: " + sizing_info(asg_before)
+    logger.info("ASG sizing before update: " + sizing_info(asg_before))
     desired_ami_id = get_next_ami_id(asg_before)
     parameters = [
         ("amiID", desired_ami_id),
@@ -106,7 +106,7 @@ def test_update():
 
     StackUpdater(stack_name, region, observer_callback=callback).update()
     asg_after = get_asg()
-    print "ASG sizing after update: " + sizing_info(asg_after)
+    logger.info("ASG sizing after update: " + sizing_info(asg_after))
 
     assert asg_before.min_size == asg_after.min_size
     assert asg_before.max_size == asg_after.max_size
@@ -116,27 +116,29 @@ def test_update():
 
     # terminate instances is async, we need a bit of time to wait here
     # TODO: find something better
-    time.sleep(60)
+    time.sleep(600)
 
     for instance in asg_after.instances:
         if instance.lifecycle_state in ASGUpdater.RUNNING_LIFECYCLE_STATES:
-            print("Found instance: {0} in state: {1}".format(instance.instance_id, instance.lifecycle_state))
+            logger.info("Found instance: {0} in state: {1}".format(instance.instance_id, instance.lifecycle_state))
             assert instance.launch_config_name == asg_after.launch_config_name, \
                 "Instance {0} has launch-config {1} but should have {2}".format(instance.instance_id,
                                                                                 instance.launch_config_name,
                                                                                 asg_after.launch_config_name)
 
 
-logging.info("Testing stackupdater doing nothing if there is nothing to do:")
+logger.info("Testing stackupdater doing nothing if there is nothing to do:")
 try:
     test_no_update()
-    logging.info("Successfully completed test_no_update")
+    logger.info("Successfully completed test_no_update")
 except Exception as e:
-    logging.error("test_no_update failed with error: " + str(e))
+    logger.error("test_no_update failed with error: " + str(e))
+    logger.exception(e)
 
-logging.info("Testing stackupdater updates all instances to match the new lc:")
+logger.info("Testing stackupdater updates all instances to match the new lc:")
 try:
     test_update()
-    logging.info("Successfully completed test_update")
+    logger.info("Successfully completed test_update")
 except Exception as e:
-    logging.error("test_update failed with error: " + str(e))
+    logger.error("test_update failed with error: " + str(e))
+    logger.exception(e)
