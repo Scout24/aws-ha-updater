@@ -71,9 +71,9 @@ def test_no_update():
     asg_after = get_asg()
     print "After: " + sizing_info(asg_after)
 
-    assert asg_before.min_size == asg_after.min_size
-    assert asg_before.max_size == asg_after.max_size
-    assert asg_before.desired_capacity == asg_after.desired_capacity
+    assert asg_before.min_size == asg_after.min_size, "ASG min_size shouldn't have changed"
+    assert asg_before.max_size == asg_after.max_size, "ASG max_size shouldn't have changed"
+    assert asg_before.desired_capacity == asg_after.desired_capacity, "ASG desired_capacity shouldn't have changed"
 
     assert len(asg_after.suspended_processes) == 0
 
@@ -83,13 +83,14 @@ def test_update():
         print event
         if event == ASGUpdater.SCALE_OUT_COMPLETED:
             asg = get_asg()
-            print "after scale out: " + sizing_info(asg)
+            print "ASG sizing after scale_out: " + sizing_info(asg)
 
             #TODO: add nice error messages
             #TODO: test more precisely
-            assert asg.min_size > asg_before.min_size
-            assert asg.max_size > asg_before.max_size
-            assert asg.desired_capacity > asg_before.desired_capacity
+            assert asg.min_size > asg_before.min_size, "ASG min_size should be bigger than before scale_out"
+            assert asg.max_size > asg_before.max_size, "ASG max_size should be bigger than before scale_out"
+            assert asg.desired_capacity > asg_before.desired_capacity, \
+                "ASG desired_capacity should be bigger than before scale_out"
 
     # action plan
     asg_before = get_asg()
@@ -105,7 +106,7 @@ def test_update():
 
     StackUpdater(stack_name, region, observer_callback=callback).update()
     asg_after = get_asg()
-    print "After: " + sizing_info(asg_after)
+    print "ASG sizing after update: " + sizing_info(asg_after)
 
     assert asg_before.min_size == asg_after.min_size
     assert asg_before.max_size == asg_after.max_size
