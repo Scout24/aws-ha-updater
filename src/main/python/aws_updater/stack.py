@@ -11,12 +11,13 @@ from aws_updater import describe_stack, get_all_autoscaling_groups
 
 class StackUpdater(object):
 
-    def __init__(self, stack_name, region, observer_callback=None):
+    def __init__(self, stack_name, region, observer_callback=None, timeout_in_seconds=None):
         self.stack_name = stack_name
         self.cfn_conn = boto.cloudformation.connect_to_region(region)
         self.as_conn = boto.ec2.autoscale.connect_to_region(region)
         self.ec2_conn = boto.ec2.connect_to_region(region)
         self.elb_conn = boto.ec2.elb.connect_to_region(region)
+        self.timeout_in_seconds = timeout_in_seconds
 
         if not observer_callback:
             self.observer_callback = self.noop_observer_callback
@@ -37,4 +38,9 @@ class StackUpdater(object):
     def update(self):
         for asg in self.get_all_asgs_from_stack():
             print "updating asg '%s'" % asg.name
-            ASGUpdater(asg, self.as_conn, self.ec2_conn, self.elb_conn, self.observer_callback).update()
+            ASGUpdater(asg,
+                       self.as_conn,
+                       self.ec2_conn,
+                       self.elb_conn,
+                       self.observer_callback,
+                       timeout_in_seconds=self.timeout_in_seconds).update()

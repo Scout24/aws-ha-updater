@@ -18,7 +18,7 @@ class ASGUpdater(object):
     RUNNING_LIFECYCLE_STATES = ("Pending", "InService", "Rebooting")
     SCALE_OUT_COMPLETED = "SCALE_OUT_COMPLETED"
 
-    def __init__(self, asg, as_conn, ec2_conn, elb_conn, observer_callback=None):
+    def __init__(self, asg, as_conn, ec2_conn, elb_conn, observer_callback=None, timeout_in_seconds=None):
         self.asg = asg
         self.as_conn = as_conn
         self.ec2_conn = ec2_conn
@@ -26,6 +26,7 @@ class ASGUpdater(object):
         self.original_desired_capacity = None
         self.original_min_size = None
         self.original_max_size = None
+        self.timeout_in_seconds = timeout_in_seconds or 600
 
         dummy_observer_callback = lambda event: None
         self.observer_callback = observer_callback or dummy_observer_callback
@@ -44,9 +45,11 @@ class ASGUpdater(object):
     def wait_for_scale_out_complete(self, needed_nr_of_uptodate_instances=None):
         if not needed_nr_of_uptodate_instances:
             needed_nr_of_uptodate_instances = self.count_running_instances()
-        print("waiting for %i instances to have '%s' and be 'InService'" % (needed_nr_of_uptodate_instances, self.asg.launch_config_name))
+        print("waiting %i seconds for %i instances to have '%s' and be 'InService'" % (self.timeout_in_seconds,
+                                                                                       needed_nr_of_uptodate_instances,
+                                                                                       self.asg.launch_config_name))
         start = time.time()
-        wait_until = start + 600  # TODO make configurable
+        wait_until = start + self.timeout_in_seconds
         while True:
             self.asg = self.as_conn.get_all_groups(names=[self.asg.name])[0]    # TODO refactor
             instances = self.get_instances_views()

@@ -10,6 +10,7 @@ Options:
     --warmup-seconds=INT       Seconds to wait for warmup [default: 25]
     --action-timeout=INT       Seconds to wait for the action to finish [default: 300]
     --lenient_look_back=INT    Seconds to look back for events [default: 5]
+    --healthy-timeout=SECONDS  Healthy timeout in seconds for instances [default: 600]
 """
 
 import json
@@ -49,6 +50,7 @@ region = arguments["--region"]
 warmup_seconds = int(arguments["--warmup-seconds"])
 lenient_look_back = int(arguments["--lenient_look_back"])
 action_timeout = int(arguments["--action-timeout"])
+timeout_in_seconds = int(arguments["--healthy-timeout"])
 
 print "update-stack: update/create an aws stack"
 print "========================================"
@@ -122,7 +124,7 @@ if exit_code:
     sys.exit(exit_code)
 
 try:
-    StackUpdater(stack_name, region).update()
+    StackUpdater(stack_name, region, timeout_in_seconds=timeout_in_seconds).update()
     exit_code = EXIT_CODE_OK
 except BaseException as e:
     print "[ERROR] %s" % e
