@@ -27,10 +27,8 @@ class ASGUpdater(object):
         self.original_min_size = None
         self.original_max_size = None
 
-        if not observer_callback:
-            self.observer_callback = lambda event: None
-        else:
-            self.observer_callback = observer_callback
+        dummy_observer_callback = lambda event: None
+        self.observer_callback = observer_callback or dummy_observer_callback
 
     def update(self):
         if self.needs_update():
