@@ -19,13 +19,8 @@ class StackUpdater(object):
         self.elb_conn = boto.ec2.elb.connect_to_region(region)
         self.timeout_in_seconds = timeout_in_seconds
 
-        if not observer_callback:
-            self.observer_callback = self.noop_observer_callback
-        else:
-            self.observer_callback = observer_callback
-
-    def noop_observer_callback(self, event):
-        pass
+        dummy_observer_callback = lambda event: None
+        self.observer_callback = observer_callback or dummy_observer_callback
 
     def get_all_asgs_from_stack(self):
         stack = describe_stack(self.cfn_conn, self.stack_name)
