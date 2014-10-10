@@ -41,6 +41,10 @@ class ASGUpdater(object):
                 print("Problem while updating ASG {0}.\nRolling back now.".format(self.asg.name))
                 self.rollback()
                 raise RolledBackException("Rolled back because of {0}".format(e))
+            except KeyboardInterrupt:
+                print("Interrupted by user, rolling back now.")
+                self.rollback()
+                raise
 
     def wait_for_scale_out_complete(self, needed_nr_of_uptodate_instances=None):
         if not needed_nr_of_uptodate_instances:

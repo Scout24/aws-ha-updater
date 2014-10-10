@@ -138,6 +138,15 @@ class ASGUpdaterTests(TestCase):
         mock_updater.rollback.assert_called_with()
         self.assertEqual(mock_updater.commit_update.called, False)
 
+    def test_should_rollback_when_ctrl_c_by_user(self):
+        mock_updater = Mock(ASGUpdater, asg=Mock(name="some-asg"))
+        mock_updater.wait_for_scale_out_complete.side_effect = KeyboardInterrupt()
+
+        self.assertRaises(KeyboardInterrupt, ASGUpdater.update, mock_updater)
+
+        mock_updater.rollback.assert_called_with()
+        self.assertEqual(mock_updater.commit_update.called, False)
+
     @patch("aws_updater.asg.time.sleep")
     @patch("aws_updater.asg.ASGUpdater.get_instances_views")
     @patch("aws_updater.asg.ASGUpdater.count_running_instances")
