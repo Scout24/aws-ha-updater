@@ -38,7 +38,7 @@ class ASGUpdater(object):
                 self.wait_for_scale_out_complete()
                 self.commit_update()
             except Exception as e:
-                print("Problem while updating ASG {0}.\nRolling back now.".format(self.asg.name))
+                print("Problem while updating ASG {0} : {1}.\nRolling back now.".format(self.asg.name, e))
                 self.rollback()
                 raise RolledBackException("Rolled back because of {0}".format(e))
             except KeyboardInterrupt:
