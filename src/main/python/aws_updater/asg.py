@@ -180,4 +180,5 @@ class ASGUpdater(object):
             print("No instances to terminate.")
             return
         print("Terminating instances {0}".format(" ".join(instances)))
-        self.ec2_conn.terminate_instances(instances)
+        for instance in instances:
+            self.as_conn.terminate_instance(instance, decrement_capacity=False)
