@@ -144,7 +144,6 @@ class ASGUpdater(object):
                                             if instance and instance.launch_config_name != self.asg.launch_config_name]
 
         self._terminate_instances(instances_with_old_launch_config)
-
         self._restore_original_asg_size()
 
         self.asg.resume_processes()
@@ -160,7 +159,6 @@ class ASGUpdater(object):
                                             if instance and instance.launch_config_name == self.asg.launch_config_name]
 
         self._terminate_instances(instances_with_new_launch_config)
-
         self._restore_original_asg_size()
 
     def _restore_original_asg_size(self):

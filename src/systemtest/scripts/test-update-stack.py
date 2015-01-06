@@ -83,6 +83,13 @@ def get_asg():
     assert len(autoscaling_groups) == 1
     return autoscaling_groups[0]
 
+def count_running_instances(asg):
+    RUNNING_LIFECYCLE_STATES = ("Pending", "InService", "Rebooting")
+    count = 0
+    for instance in asg.instances:
+        if instance.lifecycle_state in RUNNING_LIFECYCLE_STATES:
+            count += 1
+    return count
 
 def test_no_update():
     def callback(event):
@@ -91,14 +98,26 @@ def test_no_update():
 
     # action plan
     asg_before = get_asg()
+    running_instances_before = count_running_instances(asg_before)
     logger.info("ASG sizing before update: " + sizing_info(asg_before))
+    logger.info("Running instances before update: {0}".format(running_instances_before))
+
+    # test asg size directly after creation
+    assert asg_before.min_size == 1; "ASG min_size should be equal zu what is configured in teststack.json"
+    assert asg_before.max_size == 6; "ASG max_size should be equal zu what is configured in teststack.json"
+    assert asg_before.desired_capacity == 3; "ASG desired_capacity should be equal zu what is configured in teststack.json"
+
     StackUpdater(stack_name, region, observer_callback=callback).update()
+
     asg_after = get_asg()
+    running_instances_after = count_running_instances(asg_after)
     logger.info("ASG sizing after update: " + sizing_info(asg_after))
+    logger.info("Running instances after update: {0}".format(running_instances_after))
 
     assert asg_before.min_size == asg_after.min_size, "ASG min_size shouldn't have changed"
     assert asg_before.max_size == asg_after.max_size, "ASG max_size shouldn't have changed"
     assert asg_before.desired_capacity == asg_after.desired_capacity, "ASG desired_capacity shouldn't have changed"
+    assert running_instances_before == running_instances_after, "Number of running instances shouldn't have changed"
 
     assert len(asg_after.suspended_processes) == 0
 
@@ -134,9 +153,9 @@ def test_update():
     asg_after = get_asg()
     logger.info("ASG sizing after update: " + sizing_info(asg_after))
 
-    assert asg_before.min_size == asg_after.min_size
-    assert asg_before.max_size == asg_after.max_size
-    assert asg_before.desired_capacity == asg_after.desired_capacity
+    assert asg_before.min_size == asg_after.min_size, "Min size of ASG shouldn't have changed"
+    assert asg_before.max_size == asg_after.max_size, "Max size of ASG shouldn't have changed"
+    assert asg_before.desired_capacity == asg_after.desired_capacity, "Desired capacity of ASG shouldn't have changed"
 
     assert len(asg_after.suspended_processes) == 0, "All processes must be resumed after Stackupdater run"
 
