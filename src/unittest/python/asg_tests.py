@@ -29,7 +29,9 @@ class ASGUpdaterTests(TestCase):
     def test_should_terminate_instances(self):
         self.asg_updater._terminate_instances(["any-machine-id", "any-other-machine-id"])
 
-        self.ec2_conn.terminate_instances.assert_called_with(["any-machine-id", "any-other-machine-id"])
+        assert self.asg_conn.terminate_instance.call_count == 2
+        self.asg_conn.terminate_instance.assert_any_call("any-machine-id", decrement_capacity=False)
+        self.asg_conn.terminate_instance.assert_any_call("any-other-machine-id", decrement_capacity=False)
 
     def test_should_terminate_old_instances_when_committing_update(self):
         self.asg.instances = [Mock(instance_id="1", launch_config_name="any-lc"),
