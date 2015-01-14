@@ -99,7 +99,8 @@ print
 
 error = None
 try:
-    result = action(stack_name, template_body=template, parameters=[item for item in current.iteritems()])
+    result = action(stack_name, template_body=template, parameters=[item for item in current.iteritems()],
+                    capabilities=['CAPABILITY_IAM'])
     exit_code = EXIT_CODE_OK
 except boto.exception.BotoServerError, e:
     error = json.loads(e.body).get("Error", "{}")
