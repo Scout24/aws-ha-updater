@@ -35,7 +35,7 @@ update-stack STACK_NAME [options] [PARAMETER...]
 
 Options:
     --region=STRING            aws region to connect to [default: eu-west-1]
-    --template=FILENAME
+    --template=FILENAME or URL
 
     --warmup-seconds=INT       Seconds to wait for warmup [default: 25]
     --action-timeout=INT       Seconds to wait for the action to finish [default: 300]
