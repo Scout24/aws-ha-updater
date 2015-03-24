@@ -154,7 +154,7 @@ def wait_for_end_event(connection, stack, younger_than, action_timeout):
         end_event = search_for_event(
             stack,
             younger_than,
-            lambda event: event.resource_type == "AWS::CloudFormation::Stack" and event.resource_status.endswith("_COMPLETE")
+            lambda event: event.resource_type == "AWS::CloudFormation::Stack" and event.resource_status.endswith("_COMPLETE") and event.logical_resource_id == stack.stack_name
         )
         if end_event:
             return (stack, end_event)
