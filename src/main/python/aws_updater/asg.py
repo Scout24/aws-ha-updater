@@ -131,7 +131,7 @@ class ASGUpdater(object):
             self.original_min_size, self.asg.min_size,
             self.original_desired_capacity, self.asg.desired_capacity))
 
-        self.asg.update()
+        self.asg.update_asgs()
         self.observer_callback(self.SCALE_OUT_COMPLETED)
 
     def commit_update(self):
@@ -171,7 +171,7 @@ class ASGUpdater(object):
         self.asg.min_size = self.original_min_size
         self.asg.desired_capacity = self.original_desired_capacity
 
-        self.asg.update()
+        self.asg.update_asgs()
 
     def _terminate_instances(self, instances):
         if not instances:

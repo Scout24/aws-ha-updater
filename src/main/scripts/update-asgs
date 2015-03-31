@@ -20,7 +20,7 @@ print "update-asgs: update the asgs of a stack in a high-available manner"
 print "=================================================================="
 
 try:
-    StackUpdater(stack_name, region).update()
+    StackUpdater(stack_name, region).update_asgs()
 except Exception as e:
     print "[Error] Problem while updating stack {0}: {1}".format(stack_name, e)
     raise

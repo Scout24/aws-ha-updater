@@ -13,15 +13,11 @@ Options:
     --healthy-timeout=SECONDS  Healthy timeout in seconds for instances [default: 600]
 """
 
-import json
 import sys
-import urllib2
-
 from docopt import docopt
 
 import boto.cloudformation
 
-from aws_updater import wait_for_action_to_complete, describe_stack
 from aws_updater.stack import StackUpdater
 
 EXIT_CODE_OK = 0
@@ -35,15 +31,6 @@ error = None
 exit_code = EXIT_CODE_UNKNOWNPROBLEM
 
 arguments = docopt(__doc__)
-
-
-def get_parameters_from_list(parameters):
-    result = {}
-    for parameter in parameters:
-        key, value = parameter.split("=", 1)
-        result[key] = value
-    return result
-
 
 stack_name = arguments["STACK_NAME"]
 template_filename = arguments["--template"]
@@ -60,86 +47,12 @@ cloudformation_conn = boto.cloudformation.connect_to_region(region)
 
 print "connection cloudformation: %s" % cloudformation_conn
 
-template = None
-
-if template_filename:
-    if template_filename.startswith("http") or template_filename.startswith("https"):
-        try:
-            response = urllib2.urlopen(template_filename)
-        except urllib2.HTTPError as exc:
-            raise Exception(exc)
-        except urllib2.URLError as exc:
-            raise Exception(exc)
-        else:
-            template = response.read()
-    else:
-        with open(template_filename) as template_file:
-            template = "".join(template_file.readlines())
-    try:
-        print "validating template %s" % template_filename
-        cloudformation_conn.validate_template(template)
-    except boto.exception.BotoServerError, e:
-        print "cannot validate template %s" % template_filename
-        print e
-        sys.exit(EXIT_CODE_VALIDATEERROR)
-
-stack = describe_stack(cloudformation_conn, stack_name)
-if stack:
-    action = cloudformation_conn.update_stack
-    print "updating running stack"
-else:
-    action = cloudformation_conn.create_stack
-    print "creating stack"
-
-if not stack and not template:
-    print "cannot create stack without template"
-    sys.exit(EXIT_CODE_CANNOT_CREATE_STACK)
-
-if not template:
-    template = "".join(stack.get_template().get("GetTemplateResponse", {}).get("GetTemplateResult", {}).get("TemplateBody", []))
-
-given = get_parameters_from_list(arguments["PARAMETER"])
-current = {}
-for p in stack.parameters:
-    current[p.key] = p.value
-
-current.update(given)
-print "parameters"
-for key, value in current.iteritems():
-    print "%20s: %s" % (key, value)
-print
-
-error = None
 try:
-    result = action(stack_name, template_body=template, parameters=[item for item in current.iteritems()],
-                    capabilities=['CAPABILITY_IAM'])
+    updater = StackUpdater(stack_name, region, timeout_in_seconds=timeout_in_seconds)
+    updater.update_stack(arguments["PARAMETER"], template_filename)
+    updater.update_asgs()
     exit_code = EXIT_CODE_OK
-except boto.exception.BotoServerError, e:
-    error = json.loads(e.body).get("Error", "{}")
-    if error.get("Message") == "No updates are to be performed.":
-        print "nothing to do, everything fine :o)"
-        exit_code = EXIT_CODE_OK
-    else:
-        print "[ERROR] %(Code)20s: %(Message)s" % error
-        exit_code = EXIT_CODE_CANNOT_UPDATE_STACK
-except BaseException, e:
-    print "[ERROR] something went horribly wrong:"
-    print e
-    exit_code = EXIT_CODE_CANNOT_UPDATE_STACK
-
-if exit_code:
-    sys.exit(exit_code)
-
-if not error:
-    exit_code = wait_for_action_to_complete(cloudformation_conn, stack_name, warmup_seconds, lenient_look_back, action_timeout)
-
-if exit_code:
-    sys.exit(exit_code)
-
-try:
-    StackUpdater(stack_name, region, timeout_in_seconds=timeout_in_seconds).update()
-    exit_code = EXIT_CODE_OK
-except BaseException as e:
+except Exception as e:
     print "[ERROR] %s" % e
     exit_code = EXIT_CODE_CANNOT_UPDATE_ASGS
 

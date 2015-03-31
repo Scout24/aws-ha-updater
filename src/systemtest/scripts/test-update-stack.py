@@ -107,7 +107,7 @@ def test_no_update():
     assert asg_before.max_size == 6; "ASG max_size should be equal zu what is configured in teststack.json"
     assert asg_before.desired_capacity == 3; "ASG desired_capacity should be equal zu what is configured in teststack.json"
 
-    StackUpdater(stack_name, region, observer_callback=callback).update()
+    StackUpdater(stack_name, region, observer_callback=callback).update_asgs()
 
     asg_after = get_asg()
     running_instances_after = count_running_instances(asg_after)
@@ -146,7 +146,7 @@ def test_update():
         ("vpcID", vpc)]
     update_stack(parameters)
 
-    StackUpdater(stack_name, region, observer_callback=callback).update()
+    StackUpdater(stack_name, region, observer_callback=callback).update_asgs()
 
     logger.info("Waiting 300s to ensure asg is in consistent state...")
     time.sleep(300)
