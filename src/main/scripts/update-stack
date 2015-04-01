@@ -13,22 +13,11 @@ Options:
     --healthy-timeout=SECONDS  Healthy timeout in seconds for instances [default: 600]
 """
 
-import sys
 from docopt import docopt
 
-import boto.cloudformation
-
+import sys
 from aws_updater.stack import StackUpdater
 
-EXIT_CODE_OK = 0
-EXIT_CODE_CANNOT_CREATE_STACK = 1
-EXIT_CODE_CANNOT_UPDATE_STACK = 2
-EXIT_CODE_CANNOT_UPDATE_ASGS = 3
-EXIT_CODE_VALIDATEERROR = 10
-EXIT_CODE_UNKNOWNPROBLEM = 125
-
-error = None
-exit_code = EXIT_CODE_UNKNOWNPROBLEM
 
 arguments = docopt(__doc__)
 
@@ -43,17 +32,10 @@ timeout_in_seconds = int(arguments["--healthy-timeout"])
 print "update-stack: update/create an aws stack"
 print "========================================"
 
-cloudformation_conn = boto.cloudformation.connect_to_region(region)
-
-print "connection cloudformation: %s" % cloudformation_conn
-
 try:
     updater = StackUpdater(stack_name, region, timeout_in_seconds=timeout_in_seconds)
     updater.update_stack(arguments["PARAMETER"], template_filename)
     updater.update_asgs()
-    exit_code = EXIT_CODE_OK
 except Exception as e:
     print "[ERROR] %s" % e
-    exit_code = EXIT_CODE_CANNOT_UPDATE_ASGS
-
-sys.exit(exit_code)
+    sys.exit(1)

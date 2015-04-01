@@ -1,17 +1,14 @@
+import urllib2
+import json
+
 import boto.cloudformation
 import boto.ec2
 import boto.ec2.elb
 import boto.ec2.autoscale
 
-import urllib2
-import sys
-import json
-
 from aws_updater.utils import timed
-
 from aws_updater.asg import ASGUpdater
 from aws_updater import describe_stack, get_all_autoscaling_groups, wait_for_action_to_complete
-
 
 class StackUpdater(object):
 
@@ -44,7 +41,8 @@ class StackUpdater(object):
                        self.observer_callback,
                        timeout_in_seconds=self.timeout_in_seconds).update()
 
-    def get_parameters_from_list(self, parameters):
+    @staticmethod
+    def get_parameters_from_list(parameters):
         result = {}
         for parameter in parameters:
             key, value = parameter.split("=", 1)
@@ -72,7 +70,7 @@ class StackUpdater(object):
                 print "validating template %s" % template_filename
                 self.cfn_conn.validate_template(template)
             except boto.exception.BotoServerError, e:
-                raise Exception("cannot validate template %s" % template_filename)
+                raise Exception("cannot validate template %s, caused by: %s" % template_filename, str(e))
 
 
         stack = describe_stack(self.cfn_conn, self.stack_name)
@@ -107,6 +105,6 @@ class StackUpdater(object):
             else:
                 raise Exception("[ERROR] %(Code)20s: %(Message)s" % error)
         except BaseException, e:
-            raise Exception("[ERROR] something went horribly wrong: " % e)
+            raise Exception("[ERROR] something went horribly wrong: " % str(e))
 
         wait_for_action_to_complete(self.cfn_conn, self.stack_name, warmup_seconds, lenient_lookback, action_timeout)
