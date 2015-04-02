@@ -1,0 +1,2 @@
+class BucketNotAccessibleException(Exception):
+    pass

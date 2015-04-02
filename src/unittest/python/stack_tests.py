@@ -1,9 +1,9 @@
 from unittest import TestCase
 
 from mock import patch, Mock
-
 from aws_updater.stack import StackUpdater
-
+from aws_updater.exception import *
+from boto.exception import BotoServerError
 
 def resource(typ, physical_resource_id):
     actual_resource = Mock()
@@ -46,3 +46,23 @@ class StackUpdaterTests(TestCase):
         stack_updater.get_all_asgs_from_stack()
 
         self.asg_conn.return_value.get_all_groups.assert_called_with([1, 4])
+
+    @patch("aws_updater.stack.boto.s3.connection.S3Connection.get_bucket")
+    def test_get_template_should_error_when_bucket_is_not_accessible(self, get_bucket):
+        get_bucket.side_effect = BotoServerError(403, "bang!")
+
+        stack_updater = StackUpdater("any-stack-name", "any-aws-region")
+
+        with self.assertRaises(BucketNotAccessibleException):
+            stack_updater.get_template("s3://any-bucket/any-template.json")
+
+    @patch("aws_updater.stack.boto.s3.connection.S3Connection.get_bucket")
+    @patch("aws_updater.stack.boto.s3.bucket.Bucket.get_key")
+    @patch("aws_updater.stack.boto.s3.key.Key.get_contents_as_string")
+    def test_get_template_should_return_template(self, get_contents_as_string, get_key, get_bucket):
+        template_contents = "this is no json"
+        get_contents_as_string.return_value = template_contents
+
+        stack_updater = StackUpdater("any-stack-name", "any-aws-region")
+
+        self.assertEqual(stack_updater.get_template("s3://any-bucket/any-template.json"), template_contents)

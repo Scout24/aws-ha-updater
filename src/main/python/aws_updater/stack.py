@@ -5,10 +5,13 @@ import boto.cloudformation
 import boto.ec2
 import boto.ec2.elb
 import boto.ec2.autoscale
+import boto.s3.connection
+
 
 from aws_updater.utils import timed
 from aws_updater.asg import ASGUpdater
 from aws_updater import describe_stack, get_all_autoscaling_groups, wait_for_action_to_complete
+from aws_updater.exception import *
 
 class StackUpdater(object):
 
@@ -18,6 +21,7 @@ class StackUpdater(object):
         self.as_conn = boto.ec2.autoscale.connect_to_region(region)
         self.ec2_conn = boto.ec2.connect_to_region(region)
         self.elb_conn = boto.ec2.elb.connect_to_region(region)
+        self.s3_conn = boto.s3.connection.S3Connection
         self.timeout_in_seconds = timeout_in_seconds
 
         dummy_observer_callback = lambda event: None
@@ -49,29 +53,37 @@ class StackUpdater(object):
             result[key] = value
         return result
 
+    def get_file_from_bucket(self, bucketname, filename):
+        bucket = self.s3_conn.get_bucket(bucketname)
+        file_key = bucket.get_key(filename)
+        return file_key.get_contents_as_string()
+
+    def get_template(self, template_filename):
+        if template_filename.startswith("s3"):
+            try:
+                urlparts = template_filename.split('/')
+                bucketname = urlparts[2]
+                filename = '/'.join(urlparts[3:])
+                template = self.get_file_from_bucket(bucketname, filename)
+            except boto.exception.BotoServerError, e:
+                raise BucketNotAccessibleException("cannot get template_file: {0}, caused by: {1}".format(template_filename, e))
+        else:
+            with open(template_filename) as template_file:
+                template = "".join(template_file.readlines())
+
+        try:
+            print "validating template %s" % template_filename
+            self.cfn_conn.validate_template(template)
+        except boto.exception.BotoServerError, e:
+            raise Exception("cannot validate template {0}, caused by: {1}".format(template_filename, e))
+        return template
+
     def update_stack(self, stack_parameters, template_filename=None, lenient_lookback=5, action_timeout=300,
                      warmup_seconds=25):
-        template = None
-
         if template_filename:
-            if template_filename.startswith("http") or template_filename.startswith("https"):
-                try:
-                    response = urllib2.urlopen(template_filename)
-                except urllib2.HTTPError as exc:
-                    raise Exception(exc)
-                except urllib2.URLError as exc:
-                    raise Exception(exc)
-                else:
-                    template = response.read()
-            else:
-                with open(template_filename) as template_file:
-                    template = "".join(template_file.readlines())
-            try:
-                print "validating template %s" % template_filename
-                self.cfn_conn.validate_template(template)
-            except boto.exception.BotoServerError, e:
-                raise Exception("cannot validate template %s, caused by: %s" % template_filename, e)
-
+            template = get_template(template_filename)
+        else:
+            template = None
 
         stack = describe_stack(self.cfn_conn, self.stack_name)
         if stack:
