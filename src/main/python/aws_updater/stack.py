@@ -70,7 +70,7 @@ class StackUpdater(object):
                 print "validating template %s" % template_filename
                 self.cfn_conn.validate_template(template)
             except boto.exception.BotoServerError, e:
-                raise Exception("cannot validate template %s, caused by: %s" % template_filename, str(e))
+                raise Exception("cannot validate template %s, caused by: %s" % template_filename, e)
 
 
         stack = describe_stack(self.cfn_conn, self.stack_name)
@@ -105,6 +105,6 @@ class StackUpdater(object):
             else:
                 raise Exception("[ERROR] %(Code)20s: %(Message)s" % error)
         except BaseException, e:
-            raise Exception("[ERROR] something went horribly wrong: " % str(e))
+            raise Exception("[ERROR] something went horribly wrong: %s" % e)
 
         wait_for_action_to_complete(self.cfn_conn, self.stack_name, warmup_seconds, lenient_lookback, action_timeout)
