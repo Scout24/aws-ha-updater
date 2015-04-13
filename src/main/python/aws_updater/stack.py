@@ -44,25 +44,25 @@ class StackUpdater(object):
                        timeout_in_seconds=self.timeout_in_seconds).update()
 
     @staticmethod
-    def get_parameters_from_list(parameters):
+    def _get_parameters_from_list(parameters):
         result = {}
         for parameter in parameters:
             key, value = parameter.split("=", 1)
             result[key] = value
         return result
 
-    def get_file_from_bucket(self, bucketname, filename):
+    def _get_filecontent_from_bucket(self, bucketname, filename):
         bucket = self.s3_conn.get_bucket(bucketname)
         file_key = bucket.get_key(filename)
         return file_key.get_contents_as_string()
 
-    def get_template(self, template_filename):
+    def _get_template(self, template_filename):
         if template_filename.startswith("s3"):
+            urlparts = template_filename.split('/')
+            bucketname = urlparts[2]
+            filename = '/'.join(urlparts[3:])
             try:
-                urlparts = template_filename.split('/')
-                bucketname = urlparts[2]
-                filename = '/'.join(urlparts[3:])
-                template = self.get_file_from_bucket(bucketname, filename)
+                template = self._get_filecontent_from_bucket(bucketname, filename)
             except boto.exception.BotoServerError, e:
                 raise BucketNotAccessibleException("cannot get template_file: {0}, caused by: {1}".format(template_filename, e))
         else:
@@ -73,13 +73,25 @@ class StackUpdater(object):
             print "validating template %s" % template_filename
             self.cfn_conn.validate_template(template)
         except boto.exception.BotoServerError, e:
-            raise Exception("cannot validate template {0}, caused by: {1}".format(template_filename, e))
+            raise TemplateValidationException("cannot validate template {0}, caused by: {1}".format(template_filename, e))
         return template
+
+    def _update_existing_stack_parameters(self, stack, stack_parameters):
+        given = self._get_parameters_from_list(stack_parameters)
+        current = {}
+        for p in stack.parameters:
+            current[p.key] = p.value
+        current.update(given)
+        print "parameters"
+        for key, value in current.iteritems():
+            print "%20s: %s" % (key, value)
+        print
+        return current
 
     def update_stack(self, stack_parameters, template_filename=None, lenient_lookback=5, action_timeout=300,
                      warmup_seconds=25):
         if template_filename:
-            template = self.get_template(template_filename)
+            template = self._get_template(template_filename)
         else:
             template = None
 
@@ -95,18 +107,11 @@ class StackUpdater(object):
         if not template:
             template = "".join(
                 stack.get_template().get("GetTemplateResponse", {}).get("GetTemplateResult", {}).get("TemplateBody", []))
-        given = self.get_parameters_from_list(stack_parameters)
-        current = {}
-        for p in stack.parameters:
-            current[p.key] = p.value
-        current.update(given)
-        print "parameters"
-        for key, value in current.iteritems():
-            print "%20s: %s" % (key, value)
-        print
+
+        updated_stack_parameters = self._update_existing_stack_parameters(stack, stack_parameters)
 
         try:
-            action(self.stack_name, template_body=template, parameters=[item for item in current.iteritems()],
+            action(self.stack_name, template_body=template, parameters=[item for item in updated_stack_parameters.iteritems()],
                             capabilities=['CAPABILITY_IAM'])
         except boto.exception.BotoServerError, e:
             error = json.loads(e.body).get("Error", "{}")

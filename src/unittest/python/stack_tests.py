@@ -54,15 +54,45 @@ class StackUpdaterTests(TestCase):
         stack_updater = StackUpdater("any-stack-name", "any-aws-region")
 
         with self.assertRaises(BucketNotAccessibleException):
-            stack_updater.get_template("s3://any-bucket/any-template.json")
+            stack_updater._get_template("s3://any-bucket/any-template.json")
 
     @patch("aws_updater.stack.boto.s3.connection.S3Connection.get_bucket")
-    @patch("aws_updater.stack.boto.s3.bucket.Bucket.get_key")
-    @patch("aws_updater.stack.boto.s3.key.Key.get_contents_as_string")
-    def test_get_template_should_return_template(self, get_contents_as_string, get_key, get_bucket):
+    def test_get_template_should_return_valid_template_from_s3(self, get_bucket):
         template_contents = "this is no json"
-        get_contents_as_string.return_value = template_contents
+        get_key = get_bucket.return_value.get_key
+        get_key.return_value.get_contents_as_string.return_value = template_contents
 
-        stack_updater = StackUpdater("any-stack-name", "any-aws-region")
+        result = StackUpdater("any-stack-name", "any-aws-region")._get_template("s3://any-bucket/any-template.json")
 
-        self.assertEqual(stack_updater.get_template("s3://any-bucket/any-template.json"), template_contents)
+        get_bucket.assert_called_with("any-bucket")
+        get_key.assert_called_with("any-template.json")
+        self.cfn_conn.return_value.validate_template.assert_called_with(template_contents)
+
+        self.assertEqual(result, template_contents)
+
+    @patch("__builtin__.open")
+    def test_get_template_should_return_valid_template_from_filesystem(self, open):
+        template_contents = "this is no json"
+        open.return_value.__enter__.return_value.readlines.return_value = [template_contents]
+        file_name = "/any-dir/any-template.json"
+
+        result = StackUpdater("any-stack-name", "any-aws-region")._get_template(file_name)
+
+        open.assert_called_with(file_name)
+        self.cfn_conn.return_value.validate_template.assert_called_with(template_contents)
+
+        self.assertEqual(result, template_contents)
+
+    @patch("__builtin__.open")
+    def test_get_template_should_throw_exception_when_template_is_not_valid(self, open):
+        template_contents = "this is no json"
+        open.return_value.__enter__.return_value.readlines.return_value = [template_contents]
+        validate_template = self.cfn_conn.return_value.validate_template
+        validate_template.side_effect = BotoServerError(500, "bang!")
+        file_name = "/any-dir/any-template.json"
+
+        with self.assertRaises(TemplateValidationException):
+            StackUpdater("any-stack-name", "any-aws-region")._get_template(file_name)
+
+        open.assert_called_with(file_name)
+        validate_template.assert_called_with(template_contents)
