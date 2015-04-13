@@ -1,4 +1,3 @@
-import urllib2
 import json
 
 import boto.cloudformation
@@ -6,7 +5,6 @@ import boto.ec2
 import boto.ec2.elb
 import boto.ec2.autoscale
 import boto.s3.connection
-
 
 from aws_updater.utils import timed
 from aws_updater.asg import ASGUpdater
@@ -81,7 +79,7 @@ class StackUpdater(object):
     def update_stack(self, stack_parameters, template_filename=None, lenient_lookback=5, action_timeout=300,
                      warmup_seconds=25):
         if template_filename:
-            template = get_template(template_filename)
+            template = self.get_template(template_filename)
         else:
             template = None
 
