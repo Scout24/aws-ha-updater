@@ -11,13 +11,6 @@ from aws_updater.asg import ASGUpdater
 logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', datefmt='%d.%m.%Y %H:%M:%S',level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def read_teststack_template():
-    content = ""
-    with open("../resources/teststack.json") as file:
-        for line in file:
-            content += line
-    return content
-
 parser = argparse.ArgumentParser()
 parser.add_argument("subnet", help="Subnet ID", type=str)
 parser.add_argument("az", help="Availability Zone", type=str)
@@ -27,7 +20,6 @@ args = parser.parse_args()
 
 # constants
 stack_name = "teststack-" + str(int(time.time()))
-stack_template = read_teststack_template()
 region = args.region
 subnet = args.subnet
 vpc = args.vpc
@@ -45,15 +37,11 @@ def create_stack():
         ("az", az),
         ("subnetID", subnet),
         ("vpcID", vpc)]
-    cfn_conn.create_stack(stack_name, stack_template, parameters=parameters)
-    assert aws_updater.wait_for_action_to_complete(cfn_conn,stack_name, 25, 5, 300) == 0, \
-        "Stack creation didn't complete within 300s"
+    StackUpdater(stack_name, region).update_stack(parameters, "../resources/teststack.json")
 
 
 def update_stack(parameters):
-    cfn_conn.update_stack(stack_name, stack_template, parameters=parameters)
-    assert aws_updater.wait_for_action_to_complete(cfn_conn,stack_name, 25, 5, 300) == 0, \
-        "Stack update didn't complete within 300s"
+    StackUpdater(stack_name, region).update_stack(parameters)
 
 
 def delete_stack():

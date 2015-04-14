@@ -46,9 +46,10 @@ class StackUpdater(object):
     @staticmethod
     def _get_parameters_from_list(parameters):
         result = {}
-        for parameter in parameters:
-            key, value = parameter.split("=", 1)
-            result[key] = value
+        if parameters:
+            for parameter in parameters:
+                (key, value) = parameter
+                result[key] = value
         return result
 
     def _get_filecontent_from_bucket(self, bucketname, filename):
@@ -79,8 +80,9 @@ class StackUpdater(object):
     def _update_existing_stack_parameters(self, stack, stack_parameters):
         given = self._get_parameters_from_list(stack_parameters)
         current = {}
-        for p in stack.parameters:
-            current[p.key] = p.value
+        if stack is not None:
+            for p in stack.parameters:
+                current[p.key] = p.value
         current.update(given)
         print "parameters"
         for key, value in current.iteritems():
@@ -106,7 +108,7 @@ class StackUpdater(object):
             raise Exception("cannot create stack without template")
         if not template:
             template = "".join(
-                stack.get_template().get("GetTemplateResponse", {}).get("GetTemplateResult", {}).get("TemplateBody", []))
+                self.cfn_conn.get_template(stack.stack_id).get("GetTemplateResponse", {}).get("GetTemplateResult", {}).get("TemplateBody", []))
 
         updated_stack_parameters = self._update_existing_stack_parameters(stack, stack_parameters)
 
