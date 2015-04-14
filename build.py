@@ -13,7 +13,7 @@ use_plugin("python.pycharm")
 
 name = "aws-ha-updater"
 default_task = ['clean', 'analyze', 'publish']
-version = 0.5
+version = 0.6
 
 
 @init
