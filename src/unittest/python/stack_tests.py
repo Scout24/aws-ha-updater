@@ -2,7 +2,7 @@ from unittest import TestCase
 
 from mock import patch, Mock
 from aws_updater.stack import StackUpdater
-from aws_updater.exception import *
+from aws_updater.exception import BucketNotAccessibleException, TemplateValidationException
 from boto.exception import BotoServerError
 
 def resource(typ, physical_resource_id):
@@ -53,8 +53,8 @@ class StackUpdaterTests(TestCase):
 
         stack_updater = StackUpdater("any-stack-name", "any-aws-region")
 
-        with self.assertRaises(BucketNotAccessibleException):
-            stack_updater._get_template("s3://any-bucket/any-template.json")
+        self.assertRaises(BucketNotAccessibleException,
+                          stack_updater._get_template, "s3://any-bucket/any-template.json")
 
     @patch("aws_updater.stack.boto.s3.connection.S3Connection.get_bucket")
     def test_get_template_should_return_valid_template_from_s3(self, get_bucket):
@@ -91,8 +91,8 @@ class StackUpdaterTests(TestCase):
         validate_template.side_effect = BotoServerError(500, "bang!")
         file_name = "/any-dir/any-template.json"
 
-        with self.assertRaises(TemplateValidationException):
-            StackUpdater("any-stack-name", "any-aws-region")._get_template(file_name)
+        self.assertRaises(TemplateValidationException,
+                          StackUpdater("any-stack-name", "any-aws-region")._get_template, file_name)
 
         open.assert_called_with(file_name)
         validate_template.assert_called_with(template_contents)
