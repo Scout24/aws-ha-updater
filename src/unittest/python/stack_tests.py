@@ -15,14 +15,11 @@ def resource(typ, physical_resource_id):
 class StackUpdaterTests(TestCase):
 
     def setUp(self):
-        self.cfn_patcher = patch("aws_updater.stack.boto.cloudformation.connect_to_region")
-        self.asg_patcher = patch("aws_updater.stack.boto.ec2.autoscale.connect_to_region")
-        self.ec2_patcher = patch("aws_updater.stack.boto.ec2.connect_to_region")
-        self.elb_patcher = patch("aws_updater.stack.boto.ec2.elb.connect_to_region")
-        self.cfn_conn = self.cfn_patcher.start()
-        self.asg_conn = self.asg_patcher.start()
-        self.ec2_conn = self.ec2_patcher.start()
-        self.elb_conn = self.elb_patcher.start()
+        self.s3_conn = patch("aws_updater.stack.boto.s3.connect_to_region").start()
+        self.cfn_conn = patch("aws_updater.stack.boto.cloudformation.connect_to_region").start()
+        self.asg_conn = patch("aws_updater.stack.boto.ec2.autoscale.connect_to_region").start()
+        self.ec2_conn = patch("aws_updater.stack.boto.ec2.connect_to_region").start()
+        self.elb_conn = patch("aws_updater.stack.boto.ec2.elb.connect_to_region").start()
 
     def tearDown(self):
         patch.stopall()
@@ -47,24 +44,30 @@ class StackUpdaterTests(TestCase):
 
         self.asg_conn.return_value.get_all_groups.assert_called_with([1, 4])
 
-    @patch("aws_updater.stack.boto.s3.connection.S3Connection.get_bucket")
-    def test_get_template_should_error_when_bucket_is_not_accessible(self, get_bucket):
-        get_bucket.side_effect = BotoServerError(403, "bang!")
+    def test_get_template_should_error_when_bucket_is_not_accessible(self):
+        self.s3_conn.return_value.get_bucket.side_effect = BotoServerError(403, "bang!")
 
         stack_updater = StackUpdater("any-stack-name", "any-aws-region")
 
         self.assertRaises(BucketNotAccessibleException,
                           stack_updater._get_template, "s3://any-bucket/any-template.json")
 
-    @patch("aws_updater.stack.boto.s3.connection.S3Connection.get_bucket")
-    def test_get_template_should_return_valid_template_from_s3(self, get_bucket):
+    def test_get_template_should_error_when_template_file_is_missing(self):
+        self.s3_conn.return_value.get_bucket.return_value.get_key.return_value = None
+
+        stack_updater = StackUpdater("any-stack-name", "any-aws-region")
+
+        self.assertRaises(BucketNotAccessibleException,
+                          stack_updater._get_template, "s3://any-bucket/any-template.json")
+
+    def test_get_template_should_return_valid_template_from_s3(self):
         template_contents = "this is no json"
-        get_key = get_bucket.return_value.get_key
+        get_key = self.s3_conn.return_value.get_bucket.return_value.get_key
         get_key.return_value.get_contents_as_string.return_value = template_contents
 
         result = StackUpdater("any-stack-name", "any-aws-region")._get_template("s3://any-bucket/any-template.json")
 
-        get_bucket.assert_called_with("any-bucket")
+        self.s3_conn.return_value.get_bucket.assert_called_with("any-bucket")
         get_key.assert_called_with("any-template.json")
         self.cfn_conn.return_value.validate_template.assert_called_with(template_contents)
 

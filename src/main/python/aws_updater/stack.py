@@ -19,7 +19,7 @@ class StackUpdater(object):
         self.as_conn = boto.ec2.autoscale.connect_to_region(region)
         self.ec2_conn = boto.ec2.connect_to_region(region)
         self.elb_conn = boto.ec2.elb.connect_to_region(region)
-        self.s3_conn = boto.s3.connection.S3Connection
+        self.s3_conn = boto.s3.connect_to_region(region)
         self.timeout_in_seconds = timeout_in_seconds
 
         dummy_observer_callback = lambda event: None
@@ -53,8 +53,11 @@ class StackUpdater(object):
         return result
 
     def _get_filecontent_from_bucket(self, bucketname, filename):
-        bucket = self.s3_conn.get_bucket(self.s3_conn(),bucketname)
+        bucket = self.s3_conn.get_bucket(bucketname)
         file_key = bucket.get_key(filename)
+        if file_key is None:
+            raise BucketNotAccessibleException(
+                "template file: {0} not found in bucket: {1}".format(filename, bucketname))
         return file_key.get_contents_as_string()
 
     def _get_template(self, template_filename):
@@ -65,7 +68,8 @@ class StackUpdater(object):
             try:
                 template = self._get_filecontent_from_bucket(bucketname, filename)
             except boto.exception.BotoServerError, e:
-                raise BucketNotAccessibleException("cannot get template_file: {0}, caused by: {1}".format(template_filename, e))
+                raise BucketNotAccessibleException(
+                    "cannot get template_file: {0}, caused by: {1}".format(template_filename, e))
         else:
             with open(template_filename) as template_file:
                 template = "".join(template_file.readlines())
@@ -74,7 +78,8 @@ class StackUpdater(object):
             print "validating template %s" % template_filename
             self.cfn_conn.validate_template(template)
         except boto.exception.BotoServerError, e:
-            raise TemplateValidationException("cannot validate template {0}, caused by: {1}".format(template_filename, e))
+            raise TemplateValidationException(
+                "cannot validate template {0}, caused by: {1}".format(template_filename, e))
         return template
 
     def _update_existing_stack_parameters(self, stack, stack_parameters):
