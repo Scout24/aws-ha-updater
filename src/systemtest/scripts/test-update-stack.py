@@ -1,12 +1,14 @@
 #!/usr/bin/python2.6
-import boto
-import aws_updater
 import time
 import argparse
 import logging
 
+import boto
+
+import aws_updater
 from aws_updater.stack import StackUpdater
 from aws_updater.asg import ASGUpdater
+
 
 logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s', datefmt='%d.%m.%Y %H:%M:%S',level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -33,10 +35,11 @@ as_conn = boto.ec2.autoscale.connect_to_region(region)
 
 def create_stack():
     parameters = [
-        ("amiID", "ami-748e2903"),
-        ("az", az),
-        ("subnetID", subnet),
-        ("vpcID", vpc)]
+        "amiID=ami-748e2903",
+        "az=" + az,
+        "subnetID=" + subnet,
+        "vpcID=" + vpc
+    ]
     StackUpdater(stack_name, region).update_stack(parameters, "../resources/teststack.json")
     # to test S3 bucket access
     # StackUpdater(stack_name, region).update_stack(parameters, "s3://is24-cfn-templates/teststack.json")
