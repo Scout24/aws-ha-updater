@@ -48,7 +48,7 @@ class StackUpdater(object):
         result = {}
         if parameters:
             for parameter in parameters:
-                (key, value) = parameter
+                (key, value) = parameter.split("=")
                 result[key] = value
         return result
 
