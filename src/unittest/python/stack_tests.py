@@ -1,9 +1,10 @@
 from unittest import TestCase
 
 from mock import patch, Mock
+from boto.exception import BotoServerError
+
 from aws_updater.stack import StackUpdater
 from aws_updater.exception import BucketNotAccessibleException, TemplateValidationException
-from boto.exception import BotoServerError
 
 def resource(typ, physical_resource_id):
     actual_resource = Mock()
@@ -15,7 +16,7 @@ def resource(typ, physical_resource_id):
 class StackUpdaterTests(TestCase):
 
     def setUp(self):
-        self.s3_conn = patch("aws_updater.stack.boto.s3.connect_to_region").start()
+        self.s3_conn = patch("aws_updater.stack.boto.s3.connection.S3Connection").start()
         self.cfn_conn = patch("aws_updater.stack.boto.cloudformation.connect_to_region").start()
         self.asg_conn = patch("aws_updater.stack.boto.ec2.autoscale.connect_to_region").start()
         self.ec2_conn = patch("aws_updater.stack.boto.ec2.connect_to_region").start()

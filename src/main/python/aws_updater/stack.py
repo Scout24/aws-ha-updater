@@ -19,7 +19,7 @@ class StackUpdater(object):
         self.as_conn = boto.ec2.autoscale.connect_to_region(region)
         self.ec2_conn = boto.ec2.connect_to_region(region)
         self.elb_conn = boto.ec2.elb.connect_to_region(region)
-        self.s3_conn = boto.s3.connect_to_region(region)
+        self.s3_conn = boto.s3.connection.S3Connection()
         self.timeout_in_seconds = timeout_in_seconds
 
         dummy_observer_callback = lambda event: None
