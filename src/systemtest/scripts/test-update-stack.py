@@ -38,6 +38,8 @@ def create_stack():
         ("subnetID", subnet),
         ("vpcID", vpc)]
     StackUpdater(stack_name, region).update_stack(parameters, "../resources/teststack.json")
+#... to test S3 bucket access
+#    StackUpdater(stack_name, region).update_stack(parameters, "s3://is24-cfn-templates/<directory>/teststack.json")
 
 
 def update_stack(parameters):

@@ -53,7 +53,7 @@ class StackUpdater(object):
         return result
 
     def _get_filecontent_from_bucket(self, bucketname, filename):
-        bucket = self.s3_conn.get_bucket(bucketname)
+        bucket = self.s3_conn.get_bucket(self.s3_conn(),bucketname)
         file_key = bucket.get_key(filename)
         return file_key.get_contents_as_string()
 
@@ -84,10 +84,8 @@ class StackUpdater(object):
             for p in stack.parameters:
                 current[p.key] = p.value
         current.update(given)
-        print "parameters"
         for key, value in current.iteritems():
             print "%20s: %s" % (key, value)
-        print
         return current
 
     def update_stack(self, stack_parameters, template_filename=None, lenient_lookback=5, action_timeout=300,
