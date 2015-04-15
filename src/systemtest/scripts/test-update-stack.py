@@ -133,10 +133,11 @@ def test_update():
 
     desired_ami_id = get_next_ami_id(asg_before)
     parameters = [
-        ("amiID", desired_ami_id),
-        ("az", az),
-        ("subnetID", subnet),
-        ("vpcID", vpc)]
+        "amiID=" + desired_ami_id,
+        "az=" + az,
+        "subnetID=" + subnet,
+        "vpcID=" + vpc
+    ]
     update_stack(parameters)
 
     StackUpdater(stack_name, region, observer_callback=callback).update_asgs()
