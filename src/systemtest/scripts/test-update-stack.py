@@ -34,12 +34,12 @@ as_conn = boto.ec2.autoscale.connect_to_region(region)
 
 
 def create_stack():
-    parameters = [
-        "amiID=ami-748e2903",
-        "az=" + az,
-        "subnetID=" + subnet,
-        "vpcID=" + vpc
-    ]
+    parameters = {
+        "amiID": "ami-748e2903",
+        "az": az,
+        "subnetID": subnet,
+        "vpcID": vpc
+    }
     StackUpdater(stack_name, region).update_stack(parameters, "../resources/teststack.json")
     # to test S3 bucket access
     # StackUpdater(stack_name, region).update_stack(parameters, "s3://is24-cfn-templates/teststack.json")
@@ -132,12 +132,14 @@ def test_update():
     logger.info("ASG sizing before update: " + sizing_info(asg_before))
 
     desired_ami_id = get_next_ami_id(asg_before)
-    parameters = [
-        "amiID=" + desired_ami_id,
-        "az=" + az,
-        "subnetID=" + subnet,
-        "vpcID=" + vpc
-    ]
+
+    parameters = {
+        "amiID": desired_ami_id,
+        "az": az,
+        "subnetID": subnet,
+        "vpcID": vpc
+    }
+
     update_stack(parameters)
 
     StackUpdater(stack_name, region, observer_callback=callback).update_asgs()
