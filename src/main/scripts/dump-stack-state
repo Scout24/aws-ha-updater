@@ -3,9 +3,12 @@
 usage: check-stack STACK_NAME [--show-events]
 """
 
+import boto.cloudformation
+import logging
 from docopt import docopt
 
-import boto.cloudformation
+logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', datefmt='%Y-%m-%dT%H:%M:%S', level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 arguments = docopt(__doc__)
 show_events = arguments["--show-events"]

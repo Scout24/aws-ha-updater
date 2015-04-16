@@ -14,11 +14,13 @@ Options:
 """
 
 import sys
-
+import logging
 from docopt import docopt
 
 from aws_updater.stack import StackUpdater
 
+logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', datefmt='%Y-%m-%dT%H:%M:%S', level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 arguments = docopt(__doc__)
 
@@ -32,6 +34,7 @@ timeout_in_seconds = int(arguments["--healthy-timeout"])
 
 print "update-stack: update/create an aws stack"
 print "========================================"
+
 
 def _dict_from_key_value_list(stack_parameters):
     result = {}
