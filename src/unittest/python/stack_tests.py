@@ -122,8 +122,8 @@ class StackUpdaterTests(TestCase):
         StackUpdater("any-stack-name", "any-aws-region").update_stack({"amiId": "123"}, template_filename=template)
 
         get_template.assert_called_with(template)
-        do_update_or_create.assert_called_with(self.cfn_conn.return_value.update_stack, "json", [("amiId", "123"),
-                                                                                                 ("vpcId", "13")])
+        do_update_or_create.assert_called_with(self.cfn_conn.return_value.update_stack, "json", {"amiId": "123",
+                                                                                                 "vpcId": "13"})
         wait_for_action_to_complete.assert_called_with(self.cfn_conn.return_value, "any-stack-name", ANY, ANY, ANY)
 
 
@@ -139,7 +139,7 @@ class StackUpdaterTests(TestCase):
         StackUpdater(stack_name, "any-aws-region").update_stack({})
 
         get_template.assert_called_with(describe_stack.return_value)
-        do_update_or_create.assert_called_with(self.cfn_conn.return_value.update_stack, "json", [])
+        do_update_or_create.assert_called_with(self.cfn_conn.return_value.update_stack, "json", {})
         wait_for_action_to_complete.assert_called_with(self.cfn_conn.return_value, stack_name, ANY, ANY, ANY)
 
     @patch("aws_updater.stack.StackUpdater._do_update_or_create")
