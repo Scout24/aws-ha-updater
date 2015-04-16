@@ -1,33 +1,22 @@
 import json
-
+import logging
 import boto.cloudformation
 import boto.ec2
+import boto.exception
 import boto.ec2.elb
 import boto.ec2.autoscale
 import boto.s3.connection
 
 from aws_updater.utils import timed
 from aws_updater.asg import ASGUpdater
-from aws_updater import describe_stack, get_all_autoscaling_groups, wait_for_action_to_complete
 from aws_updater.exception import TemplateValidationException, BucketNotAccessibleException
-
-
-def _get_updated_stack_parameters(existing_stack, stack_parameters):
-    current = {}
-    for parameter in existing_stack.parameters:
-        current[parameter.key] = parameter.value
-
-    current.update(stack_parameters)
-    print "parameters"
-    for key, value in current.iteritems():
-        print "%20s: %s" % (key, value)
-    print
-    return current
+from aws_updater import describe_stack, get_all_autoscaling_groups, wait_for_action_to_complete
 
 
 class StackUpdater(object):
 
     def __init__(self, stack_name, region, observer_callback=None, timeout_in_seconds=None):
+        self.logger = logging.getLogger(__name__)
         self.stack_name = stack_name
         self.cfn_conn = boto.cloudformation.connect_to_region(region)
         self.as_conn = boto.ec2.autoscale.connect_to_region(region)
@@ -42,14 +31,14 @@ class StackUpdater(object):
     def get_all_asgs_from_stack(self):
         stack = describe_stack(self.cfn_conn, self.stack_name)
         if not stack:
-            raise Exception("no stack with name '%s' found" % self.stack_name)
+            raise Exception("No stack with name '{0}' found.".format(self.stack_name))
 
         return get_all_autoscaling_groups(self.as_conn, stack)
 
     @timed
     def update_asgs(self):
         for asg in self.get_all_asgs_from_stack():
-            print "updating asg '%s'" % asg.name
+            self.logger.info("Updating ASG '{0}'.".format(asg.name))
             ASGUpdater(asg,
                        self.as_conn,
                        self.ec2_conn,
@@ -62,7 +51,7 @@ class StackUpdater(object):
         file_key = bucket.get_key(filename)
         if file_key is None:
             raise BucketNotAccessibleException(
-                "template file: {0} not found in bucket: {1}".format(filename, bucketname))
+                "Template file: {0} not found in bucket: {1}.".format(filename, bucketname))
         return file_key.get_contents_as_string()
 
     def _get_template(self, template_filename):
@@ -74,17 +63,17 @@ class StackUpdater(object):
                 template = self._get_filecontent_from_bucket(bucketname, filename)
             except boto.exception.BotoServerError, e:
                 raise BucketNotAccessibleException(
-                    "cannot get template_file: {0}, caused by: {1}".format(template_filename, e))
+                    "Unable to get template file: '{0}'. Caused by: {1}.".format(template_filename, e))
         else:
             with open(template_filename) as template_file:
                 template = "".join(template_file.readlines())
 
         try:
-            print "validating template %s" % template_filename
+            self.logger.info("Start validating template '{0}'.".format(template_filename))
             self.cfn_conn.validate_template(template)
         except boto.exception.BotoServerError, e:
             raise TemplateValidationException(
-                "cannot validate template {0}, caused by: {1}".format(template_filename, e))
+                "Invalid template '{0}'. Caused by: {1}".format(template_filename, e))
         return template
 
     def _do_update_or_create(self, action, template, stack_parameters):
@@ -94,35 +83,49 @@ class StackUpdater(object):
                    capabilities=['CAPABILITY_IAM'])
         except boto.exception.BotoServerError, e:
             error = json.loads(e.body).get("Error", "{}")
-            if error.get("Message") == "No updates are to be performed.":
-                print "nothing to do, everything fine :o)"
+            error_message = error.get("Message")
+            if error_message == "No updates are to be performed.":
+                self.logger.info("Nothing to do: {0}.".format(error_message))
             else:
-                raise Exception("[ERROR] %(Code)20s: %(Message)s" % error)
+                error_code = error.get("Code")
+                self.logger.error("Stack '{0}' does not exist.".format(self.stack_name))
+                raise Exception("{0}: {1}.".format(error_code, error_message))
         except BaseException, e:
-            raise Exception("[ERROR] something went horribly wrong: %s" % e)
+            raise Exception("Something went horribly wrong: {0}.".format(e.message))
 
     def _get_template_of_running_stack(self, stack):
         return "".join(
             self.cfn_conn.get_template(
                 stack.stack_id).get("GetTemplateResponse", {}).get("GetTemplateResult", {}).get("TemplateBody", []))
 
+    def _get_updated_stack_parameters(self, existing_stack, stack_parameters):
+        merged_stack_parameters = {}
+        for parameter in existing_stack.parameters:
+            merged_stack_parameters[parameter.key] = parameter.value
+
+        merged_stack_parameters.update(stack_parameters)
+        self.logger.info(", ".join(
+            [" : ".join((key, str(merged_stack_parameters[key]))) for key in merged_stack_parameters]))
+
+        return merged_stack_parameters
+
     def update_stack(self, stack_parameters, template_filename=None, lenient_lookback=5, action_timeout=300,
                      warmup_seconds=25):
         stack = describe_stack(self.cfn_conn, self.stack_name)
 
         if stack:
-            print "updating running stack"
+            self.logger.info("Start updating running stack.")
 
             if template_filename is None:
                 template = self._get_template_of_running_stack(stack)
             else:
                 template = self._get_template(template_filename)
 
-            updated_stack_parameters = _get_updated_stack_parameters(stack, stack_parameters)
+            updated_stack_parameters = self._get_updated_stack_parameters(stack, stack_parameters)
 
             self._do_update_or_create(self.cfn_conn.update_stack, template, updated_stack_parameters)
         else:
-            print "creating stack"
+            self.logger.info("Start creating stack.")
 
             template = self._get_template(template_filename)
             self._do_update_or_create(self.cfn_conn.create_stack, template, stack_parameters)

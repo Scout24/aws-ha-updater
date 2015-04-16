@@ -7,6 +7,7 @@ from boto.cloudformation.stack import Parameter
 from aws_updater.stack import StackUpdater
 from aws_updater.exception import BucketNotAccessibleException, TemplateValidationException
 
+
 def resource(typ, physical_resource_id):
     actual_resource = Mock()
     actual_resource.physical_resource_id = physical_resource_id
@@ -29,6 +30,8 @@ class StackUpdaterTests(TestCase):
         self.asg_conn = patch("aws_updater.stack.boto.ec2.autoscale.connect_to_region").start()
         self.ec2_conn = patch("aws_updater.stack.boto.ec2.connect_to_region").start()
         self.elb_conn = patch("aws_updater.stack.boto.ec2.elb.connect_to_region").start()
+        self.logger_mock = patch("aws_updater.stack.logging").start()
+        self.logger_mock.INFO = 20
 
     def tearDown(self):
         patch.stopall()
