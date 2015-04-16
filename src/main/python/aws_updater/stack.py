@@ -9,8 +9,15 @@ import boto.s3.connection
 
 from aws_updater.utils import timed
 from aws_updater.asg import ASGUpdater
-from aws_updater.exception import TemplateValidationException, BucketNotAccessibleException
 from aws_updater import describe_stack, get_all_autoscaling_groups, wait_for_action_to_complete
+
+
+class BucketNotAccessibleException(Exception):
+    pass
+
+
+class TemplateValidationException(Exception):
+    pass
 
 
 class StackUpdater(object):

@@ -4,8 +4,7 @@ from mock import patch, Mock, ANY
 from boto.exception import BotoServerError
 from boto.cloudformation.stack import Parameter
 
-from aws_updater.stack import StackUpdater
-from aws_updater.exception import BucketNotAccessibleException, TemplateValidationException
+from aws_updater.stack import StackUpdater, BucketNotAccessibleException, TemplateValidationException
 
 
 def resource(typ, physical_resource_id):
