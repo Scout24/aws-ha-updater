@@ -1,12 +1,12 @@
 import json
 import logging
+
 import boto.cloudformation
 import boto.ec2
 import boto.exception
 import boto.ec2.elb
 import boto.ec2.autoscale
 import boto.s3.connection
-
 from aws_updater.utils import timed
 from aws_updater.asg import ASGUpdater
 from aws_updater import describe_stack, get_all_autoscaling_groups, wait_for_action_to_complete
@@ -105,7 +105,7 @@ class StackUpdater(object):
             self.cfn_conn.get_template(
                 stack.stack_id).get("GetTemplateResponse", {}).get("GetTemplateResult", {}).get("TemplateBody", []))
 
-    def _get_updated_stack_parameters(self, existing_stack, stack_parameters):
+    def _merge_stack_parameters(self, existing_stack, stack_parameters):
         merged_stack_parameters = {}
         for parameter in existing_stack.parameters:
             merged_stack_parameters[parameter.key] = parameter.value
@@ -128,7 +128,7 @@ class StackUpdater(object):
             else:
                 template = self._get_template(template_filename)
 
-            updated_stack_parameters = self._get_updated_stack_parameters(stack, stack_parameters)
+            updated_stack_parameters = self._merge_stack_parameters(stack, stack_parameters)
 
             self._do_update_or_create(self.cfn_conn.update_stack, template, updated_stack_parameters)
         else:
