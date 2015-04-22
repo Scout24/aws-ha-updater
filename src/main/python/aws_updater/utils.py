@@ -1,5 +1,6 @@
 from functools import wraps
 from time import time
+import logging
 
 
 def timed(function):
@@ -13,3 +14,10 @@ def timed(function):
         return result
 
     return wrapper
+
+
+def get_logger():
+    logging.basicConfig(format='%(asctime)s %(levelname)s %(module)s: %(message)s',
+                        datefmt='%d.%m.%Y %H:%M:%S',
+                        level=logging.INFO)
+    return logging.getLogger(__name__)
