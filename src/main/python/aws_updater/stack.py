@@ -84,6 +84,8 @@ class StackUpdater(object):
         return template
 
     def _do_update_or_create(self, action, template, stack_parameters):
+        self.logger.info("Using stack parameters: {0}".format(stack_parameters))
+
         try:
             action(self.stack_name, template_body=template,
                    parameters=stack_parameters.items(),
