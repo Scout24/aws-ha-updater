@@ -22,14 +22,35 @@ class TemplateValidationException(Exception):
 
 class StackUpdater(object):
 
-    def __init__(self, stack_name, region, observer_callback=None, timeout_in_seconds=None):
+    def __init__(self, stack_name, region, observer_callback=None, timeout_in_seconds=None, sts_credentials=None):
         self.logger = logging.getLogger(__name__)
+
+        access_key = None
+        secret_key = None
+        session_token = None
+        if sts_credentials is not None:
+            access_key = sts_credentials.access_key
+            secret_key = sts_credentials.secret_key
+            session_token = sts_credentials.session_token
+            self.logger.info("Using STS credentials (access_key: {0}, expiration: {1})"
+                             .format(access_key, sts_credentials.expiration))
+
         self.stack_name = stack_name
-        self.cfn_conn = boto.cloudformation.connect_to_region(region)
-        self.as_conn = boto.ec2.autoscale.connect_to_region(region)
-        self.ec2_conn = boto.ec2.connect_to_region(region)
-        self.elb_conn = boto.ec2.elb.connect_to_region(region)
-        self.s3_conn = boto.s3.connection.S3Connection()
+        self.cfn_conn = boto.cloudformation.connect_to_region(region, aws_access_key_id=access_key,
+                                                              aws_secret_access_key=secret_key,
+                                                              security_token=session_token)
+        self.as_conn = boto.ec2.autoscale.connect_to_region(region, aws_access_key_id=access_key,
+                                                            aws_secret_access_key=secret_key,
+                                                            security_token=session_token)
+        self.ec2_conn = boto.ec2.connect_to_region(region, aws_access_key_id=access_key,
+                                                   aws_secret_access_key=secret_key,
+                                                   security_token=session_token)
+        self.elb_conn = boto.ec2.elb.connect_to_region(region, aws_access_key_id=access_key,
+                                                       aws_secret_access_key=secret_key,
+                                                       security_token=session_token)
+        self.s3_conn = boto.s3.connection.S3Connection(aws_access_key_id=access_key,
+                                                       aws_secret_access_key=secret_key,
+                                                       security_token=session_token)
         self.timeout_in_seconds = timeout_in_seconds
 
         dummy_observer_callback = lambda event: None

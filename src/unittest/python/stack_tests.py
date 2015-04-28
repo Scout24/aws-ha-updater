@@ -3,7 +3,6 @@ from unittest import TestCase
 from mock import patch, Mock, ANY
 from boto.exception import BotoServerError
 from boto.cloudformation.stack import Parameter
-
 from aws_updater.stack import StackUpdater, BucketNotAccessibleException, TemplateValidationException
 
 
