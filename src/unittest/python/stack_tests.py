@@ -3,7 +3,7 @@ from unittest import TestCase
 from mock import patch, Mock, ANY
 from boto.exception import BotoServerError
 from boto.cloudformation.stack import Parameter
-from aws_updater.stack import StackUpdater, BucketNotAccessibleException, TemplateValidationException
+from aws_updater.stack import StackUpdater, BucketNotAccessibleException
 
 
 def resource(typ, physical_resource_id):
@@ -70,7 +70,7 @@ class StackUpdaterTests(TestCase):
         self.assertRaises(BucketNotAccessibleException,
                           stack_updater._get_template, "s3://any-bucket/any-template.json")
 
-    def test_get_template_should_return_valid_template_from_s3(self):
+    def test_get_template_should_return_template_from_s3(self):
         template_contents = "this is no json"
         get_key = self.s3_conn.return_value.get_bucket.return_value.get_key
         get_key.return_value.get_contents_as_string.return_value = template_contents
@@ -79,7 +79,6 @@ class StackUpdaterTests(TestCase):
 
         self.s3_conn.return_value.get_bucket.assert_called_with("any-bucket")
         get_key.assert_called_with("any-template.json")
-        self.cfn_conn.return_value.validate_template.assert_called_with(template_contents)
 
         self.assertEqual(result, template_contents)
 
@@ -92,23 +91,8 @@ class StackUpdaterTests(TestCase):
         result = StackUpdater("any-stack-name", "any-aws-region")._get_template(file_name)
 
         open.assert_called_with(file_name)
-        self.cfn_conn.return_value.validate_template.assert_called_with(template_contents)
 
         self.assertEqual(result, template_contents)
-
-    @patch("__builtin__.open")
-    def test_get_template_should_throw_exception_when_template_is_not_valid(self, open):
-        template_contents = "this is no json"
-        open.return_value.__enter__.return_value.readlines.return_value = [template_contents]
-        validate_template = self.cfn_conn.return_value.validate_template
-        validate_template.side_effect = BotoServerError(500, "bang!")
-        file_name = "/any-dir/any-template.json"
-
-        self.assertRaises(TemplateValidationException,
-                          StackUpdater("any-stack-name", "any-aws-region")._get_template, file_name)
-
-        open.assert_called_with(file_name)
-        validate_template.assert_called_with(template_contents)
 
     @patch("aws_updater.stack.StackUpdater._do_update_or_create")
     @patch("aws_updater.stack.StackUpdater._get_template")

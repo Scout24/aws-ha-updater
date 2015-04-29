@@ -16,10 +16,6 @@ class BucketNotAccessibleException(Exception):
     pass
 
 
-class TemplateValidationException(Exception):
-    pass
-
-
 class StackUpdater(object):
 
     def __init__(self, stack_name, region, observer_callback=None, timeout_in_seconds=None, sts_credentials=None):
@@ -96,12 +92,6 @@ class StackUpdater(object):
             with open(template_filename) as template_file:
                 template = "".join(template_file.readlines())
 
-        try:
-            self.logger.info("Start validating template '{0}'.".format(template_filename))
-            self.cfn_conn.validate_template(template)
-        except boto.exception.BotoServerError, e:
-            raise TemplateValidationException(
-                "Invalid template '{0}'. Caused by: {1}".format(template_filename, e))
         return template
 
     def _do_update_or_create(self, action, template, stack_parameters):
