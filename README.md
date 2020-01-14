@@ -1,6 +1,8 @@
 aws-ha-updater
 ==============
 
+# This project is DEPRECATED and not any longer supported
+
 The `aws-ha-updater` allows you to update AWS Cloudformation stacks in a highly available manner.
 
 ## Why another tool?
